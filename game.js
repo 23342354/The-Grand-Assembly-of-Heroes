@@ -1763,6 +1763,7 @@ document.querySelectorAll("[data-mapview]").forEach((b) => b.onclick = () => {
   mapView = b.dataset.mapview;
   document.querySelectorAll("[data-mapview]").forEach((x) => x.classList.toggle("active", x === b));
   $("mmWrap").classList.toggle("hidden", mapView !== "all");
+  $("map").classList.toggle("hidden", mapView === "all");   // 전도일 때는 주변 지도를 아예 숨긴다
 });
 
 // ============================================================

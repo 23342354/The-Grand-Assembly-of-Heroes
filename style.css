@@ -871,7 +871,7 @@ body.has-update .topbar { top: var(--ub, 46px); }
 .map-wrap { position: relative; flex: 1; min-height: 120px; display: flex; align-items: center; justify-content: center; container-type: size; }
 .c-map .map { height: 100%; max-height: 100%; aspect-ratio: 1; max-width: 100%; gap: 3px; }
 .c-map .tile { font-size: calc(min(100cqw, 100cqh) / 14); aspect-ratio: auto; }
-.mm-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: var(--panel); }
+.mm-wrap { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: var(--panel); }
 .mm-wrap .minimap { height: 92%; aspect-ratio: 1; grid-template-rows: repeat(21, 1fr); }
 .mm-wrap .mm { width: auto; height: auto; }
 .mm-coord { font-size: 12px; color: var(--dim); }
