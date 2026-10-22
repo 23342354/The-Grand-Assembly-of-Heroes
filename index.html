@@ -117,38 +117,40 @@
     </header>
 
     <main class="layout">
+      <!-- 왼쪽: 지도 + 지금 있는 곳 -->
       <section class="map-col">
         <div class="map-frame">
           <div id="map" class="map"></div>
-          <p class="map-hint">인접한 칸을 누르거나 방향키(WASD)로 한 칸씩 이동 · 이동마다 행동력 1</p>
-        </div>
-      </section>
-
-      <section class="side-col">
-        <div class="panel minimap-panel">
-          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
-          <div id="minimap" class="minimap"></div>
-          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>보이는 곳</span><span><i class="lg lg-camp"></i>기지·야영지</span><span><i class="lg lg-tower"></i>흑선탑 (소문)</span></div>
+          <p class="map-hint">인접한 칸 클릭 · 방향키(WASD) · 이동마다 행동력 1</p>
         </div>
         <div class="panel" id="tilePanel"></div>
       </section>
 
-      <section class="log-col">
+      <!-- 가운데: 행낭 · 공방 · 임무 · 교환 · 전공록 -->
+      <section class="center-col">
+        <nav class="tabs">
+          <button class="tab active" data-tab="bag">행낭 <small>行囊</small></button>
+          <button class="tab" data-tab="craft">공방 <small>工房</small></button>
+          <button class="tab" data-tab="quest">임무 <small>任務</small><span class="tab-dot hidden" id="questDot"></span></button>
+          <button class="tab" data-tab="trade">교환 <small>交換</small><span class="tab-dot hidden" id="tradeDot"></span></button>
+          <button class="tab" data-tab="rank">전공록 <small>戰功錄</small></button>
+        </nav>
+        <section class="panel tab-panel" id="tabPanel"></section>
+      </section>
+
+      <!-- 오른쪽: 전도 + 행적 -->
+      <section class="side-col">
+        <div class="panel minimap-panel">
+          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
+          <div id="minimap" class="minimap"></div>
+          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>시야</span><span><i class="lg lg-camp"></i>기지</span><span><i class="lg lg-tower"></i>탑</span></div>
+        </div>
         <div class="panel log-panel">
           <h3 class="panel-title">행적 <small>行跡</small></h3>
           <div id="log" class="log"></div>
         </div>
       </section>
     </main>
-
-    <nav class="tabs">
-      <button class="tab active" data-tab="bag">행낭 <small>行囊</small></button>
-      <button class="tab" data-tab="craft">공방 <small>工房</small></button>
-      <button class="tab" data-tab="quest">임무 <small>任務</small><span class="tab-dot hidden" id="questDot"></span></button>
-      <button class="tab" data-tab="trade">교환 <small>交換</small><span class="tab-dot hidden" id="tradeDot"></span></button>
-      <button class="tab" data-tab="rank">전공록 <small>戰功錄</small></button>
-    </nav>
-    <section class="panel tab-panel" id="tabPanel"></section>
   </div>
 
   <!-- ===================== 토벌(전투) 창 ===================== -->
