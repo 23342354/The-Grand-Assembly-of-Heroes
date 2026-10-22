@@ -59,6 +59,12 @@
   --tB-bg: #2c1b20;   --tB-fg: #c08a86;
   --tO-bg: #33141a;   --tO-fg: #e0645a;
   --tX-bg: #0a0508;   --tX-fg: #ff5244;
+  --tV-bg: #0a1d38;   --tV-fg: #3f7fd0;
+  --tK-bg: #1b1d24;   --tK-fg: #7d8597;
+  --tQ-bg: #13263f;   --tQ-fg: #c9a356;
+  --tZ-bg: #23242c;   --tZ-fg: #c9a356;
+  --tQo-bg: #3a2f1c;  --tQo-fg: #f0cf86;
+  --tZo-bg: #2f2c35;  --tZo-fg: #f0cf86;
 
   --font-body: "IBM Plex Sans KR", sans-serif;
   --font-title: "Song Myung", serif;   /* 제목과 한자 인장 */
@@ -119,6 +125,12 @@
   --tB-bg: #e8d4cf;   --tB-fg: #7a3b2e;
   --tO-bg: #efcbc5;   --tO-fg: #8f2318;
   --tX-bg: #1a1f2e;   --tX-fg: #ff5544;
+  --tV-bg: #4d7fc2;   --tV-fg: #e9f1fc;
+  --tK-bg: #6b6f7a;   --tK-fg: #eceae4;
+  --tQ-bg: #a9c3e6;   --tQ-fg: #6b4a12;
+  --tZ-bg: #b4b6bd;   --tZ-fg: #5a3f12;
+  --tQo-bg: #e8cf96;  --tQo-fg: #5a3c06;
+  --tZo-bg: #ded3b8;  --tZo-fg: #5a3c06;
 }
 
 * { box-sizing: border-box; }
@@ -325,6 +337,14 @@ input:focus, select:focus { border-color: var(--gold); }
 .t-T { background: var(--tT-bg); color: var(--tT-fg); }
 .t-B { background: var(--tB-bg); color: var(--tB-fg); }
 .t-O { background: var(--tO-bg); color: var(--tO-fg); }
+.t-V { background: var(--tV-bg); color: var(--tV-fg); }
+.t-K { background: var(--tK-bg); color: var(--tK-fg); }
+.t-Q, .t-Z { background: var(--tQ-bg); color: var(--tQ-fg); outline: 1.5px dashed var(--tQ-fg); outline-offset: -5px; }
+.t-Z { background: var(--tZ-bg); color: var(--tZ-fg); outline-color: var(--tZ-fg); }
+.t-Qo { background: var(--tQo-bg); color: var(--tQo-fg); box-shadow: inset 0 0 0 2px var(--tQo-fg); }
+.t-Zo { background: var(--tZo-bg); color: var(--tZo-fg); box-shadow: inset 0 0 0 2px var(--tZo-fg); }
+.mm.t-Q, .mm.t-Z { outline: none; background: var(--tQ-fg); }
+.mm.t-Qo, .mm.t-Zo { box-shadow: none; background: var(--tQo-fg); }
 .t-X { background: var(--tX-bg); color: var(--tX-fg); text-shadow: 0 0 10px rgba(255,60,40,.8); }
 .tile.t-X { animation: towerPulse 3s ease-in-out infinite; }
 @keyframes towerPulse { 50% { box-shadow: inset 0 0 18px rgba(196,56,47,.55); } }
@@ -430,6 +450,10 @@ input:focus, select:focus { border-color: var(--gold); }
 .commune .quest-bar { height: 9px; }
 .commune-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .commune-row input { width: 80px; padding: 5px 8px; font-size: 14px; }
+
+.mission-list { display: flex; flex-direction: column; gap: 10px; }
+.commune.done { border-color: var(--gold); }
+.commune.claimed { opacity: .6; }
 
 /* ---------- 교환 ---------- */
 .trade-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; }

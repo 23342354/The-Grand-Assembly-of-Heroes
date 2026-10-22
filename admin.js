@@ -76,6 +76,9 @@ async function afterLogin() {
   await loadPlayers();
   await loadSent();
   updateSummary();
+  initMissionForm();
+  loadMissions();
+  loadGates();
 }
 
 // ---------- 받는 이 ----------
@@ -114,15 +117,15 @@ function itemOptions(sel) {
     `<optgroup label="${label}">${Object.entries(ITEMS).filter(([, it]) => it.type === type)
       .map(([id, it]) => `<option value="${id}" ${id === sel ? "selected" : ""}>${it.name}${it.ap ? ` (행동력 +${it.ap})` : it.heal ? ` (기혈 +${it.heal >= 999 ? "전부" : it.heal})` : ""}</option>`).join("")}</optgroup>`).join("");
 }
-function addRow(id = "porridge", n = 1) {
+function addRow(id = "porridge", n = 1, box = $("itemRows"), onChange = updateSummary) {
   const row = document.createElement("div");
   row.className = "item-row";
   row.innerHTML = `<select>${itemOptions(id)}</select><input type="number" min="1" max="99" value="${n}"><button class="btn btn-small btn-ghost" title="이 줄 지우기">×</button>`;
-  row.querySelector("button").onclick = () => { row.remove(); updateSummary(); };
-  row.querySelector("select").onchange = updateSummary;
-  row.querySelector("input").oninput = updateSummary;
-  $("itemRows").appendChild(row);
-  updateSummary();
+  row.querySelector("button").onclick = () => { row.remove(); onChange(); };
+  row.querySelector("select").onchange = onChange;
+  row.querySelector("input").oninput = onChange;
+  box.appendChild(row);
+  onChange();
 }
 $("addRow").onclick = () => addRow();
 
@@ -137,9 +140,9 @@ function buildPresets() {
   });
 }
 
-function currentItems() {
+function currentItems(box = $("itemRows")) {
   const items = {};
-  $("itemRows").querySelectorAll(".item-row").forEach((r) => {
+  box.querySelectorAll(".item-row").forEach((r) => {
     const id = r.querySelector("select").value;
     const n = Math.floor(+r.querySelector("input").value || 0);
     if (ITEMS[id] && n > 0) items[id] = Math.min(99, (items[id] || 0) + n);
@@ -191,4 +194,191 @@ async function loadSent() {
     if (e) { toast("회수 실패: " + e.message); return; }
     toast("회수했습니다."); loadSent();
   });
+}
+
+// ============================================================
+//  탭
+// ============================================================
+document.querySelectorAll("[data-at]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("[data-at]").forEach((x) => x.classList.toggle("active", x === b));
+  document.querySelectorAll(".adm-sec").forEach((sec) => sec.classList.toggle("hidden", sec.id !== "at-" + b.dataset.at));
+  if (b.dataset.at === "mission") loadMissions();
+  if (b.dataset.at === "gates") loadGates();
+});
+
+// ============================================================
+//  주간 의뢰 · 공동 임무 등록
+// ============================================================
+const KIND_LABEL = { slay: "적 처치", hunt: "토벌 승리", search: "지형 탐색", reveal: "새 땅 밝히기", deliver: "재료 납품", cook: "요리", forge: "장비 벼리기" };
+const pad = (n) => String(n).padStart(2, "0");
+function toLocalInput(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+const fmt = (iso) => new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function initMissionForm() {
+  const now = new Date();
+  const end = new Date(now.getTime() + 7 * 86400e3); end.setHours(23, 59, 0, 0);
+  $("qStart").value = toLocalInput(now);
+  $("qEnd").value = toLocalInput(end);
+  $("qKind").onchange = () => { renderParam(); qSummary(); };
+  ["qTitle", "qTarget", "qMerit", "qStart", "qEnd"].forEach((id) => $(id).oninput = qSummary);
+  document.querySelectorAll("[name=mScope]").forEach((r) => r.onchange = qSummary);
+  $("qAddReward").onclick = () => addRow("mist_tea", 1, $("qRewardRows"), qSummary);
+  $("qSave").onclick = saveMission;
+  renderParam();
+  qSummary();
+}
+
+function renderParam() {
+  const k = $("qKind").value;
+  let html = "";
+  if (k === "slay") {
+    html = `대상 적 <small>(아무것도 안 고르면 모든 적)</small><div class="chk">${Object.entries(MONSTERS).map(([id, m]) =>
+      `<label><input type="checkbox" value="${id}"> ${m.name}</label>`).join("")}</div>`;
+  } else if (k === "search") {
+    html = `대상 지형 <small>(아무것도 안 고르면 모든 지형)</small><div class="chk">${Object.entries(TILES).filter(([, t]) => t.drops && t.drops.length).map(([id, t]) =>
+      `<label><input type="checkbox" value="${id}"> ${t.name}</label>`).join("")}</div>`;
+  } else if (k === "deliver") {
+    html = `납품할 재료<select id="qItem">${Object.entries(ITEMS).map(([id, it]) => `<option value="${id}">${it.name}</option>`).join("")}</select>`;
+  }
+  $("qParamBox").innerHTML = html;
+  $("qParamBox").querySelectorAll("input,select").forEach((el) => el.onchange = qSummary);
+}
+function currentParam() {
+  const k = $("qKind").value;
+  if (k === "deliver") return $("qItem") ? $("qItem").value : null;
+  if (k === "slay" || k === "search") {
+    const v = [...$("qParamBox").querySelectorAll("input:checked")].map((c) => c.value);
+    return v.length ? v.join(",") : null;
+  }
+  return null;
+}
+function goalText(kind, param, target) {
+  const list = (param || "").split(",").filter(Boolean);
+  if (kind === "slay") return `${list.length ? list.map((id) => MONSTERS[id].name).join("·") : "아무 적"} ${target}마리 처치`;
+  if (kind === "search") return `${list.length ? list.map((id) => TILES[id].name).join("·") : "아무 지형"} 탐색 ${target}회`;
+  if (kind === "deliver") return `${ITEMS[param] ? ITEMS[param].name : "?"} ${target}개 납품`;
+  if (kind === "hunt") return `토벌 ${target}회 승리`;
+  if (kind === "reveal") return `새 땅 ${target}칸 밝히기`;
+  if (kind === "cook") return `요리 ${target}번`;
+  if (kind === "forge") return `장비 ${target}개 벼리기`;
+  return "";
+}
+function rewardOf() {
+  const r = {};
+  const merit = Math.max(0, Math.floor(+$("qMerit").value || 0));
+  if (merit) r.merit = merit;
+  const items = currentItems($("qRewardRows"));
+  if (Object.keys(items).length) r.items = items;
+  return r;
+}
+function rewardText(r) {
+  const parts = [];
+  if (r && r.merit) parts.push(`공적 ${r.merit}`);
+  if (r && r.items && Object.keys(r.items).length) parts.push(itemsText(r.items));
+  return parts.join(" · ") || "없음";
+}
+function qSummary() {
+  const scope = document.querySelector("[name=mScope]:checked").value;
+  const target = Math.floor(+$("qTarget").value || 0);
+  $("qSummary").innerHTML = `<b>${scope === "weekly" ? "주간 의뢰" : "공동 임무"}</b> · ${esc(goalText($("qKind").value, currentParam(), target))}<br>
+    ${scope === "weekly" ? "각자 목표를 채우면" : "모두의 합이 목표에 닿으면, 한 번이라도 기여한 사람이"} 보상 <b>${esc(rewardText(rewardOf()))}</b>을(를) 받습니다.`;
+}
+
+async function saveMission() {
+  const scope = document.querySelector("[name=mScope]:checked").value;
+  const title = $("qTitle").value.trim();
+  const kind = $("qKind").value;
+  const param = currentParam();
+  const target = Math.floor(+$("qTarget").value || 0);
+  const start = new Date($("qStart").value), end = new Date($("qEnd").value);
+  if (!title) { toast("제목을 적어주세요."); return; }
+  if (target < 1) { toast("목표 수를 1 이상으로 정하세요."); return; }
+  if (kind === "deliver" && !param) { toast("납품할 재료를 고르세요."); return; }
+  if (isNaN(start) || isNaN(end) || end <= start) { toast("기간을 확인하세요. 끝이 시작보다 늦어야 합니다."); return; }
+  const row = { scope, title, descr: $("qDescr").value.trim() || null, kind, param, target, reward: rewardOf(), starts_at: start.toISOString(), ends_at: end.toISOString() };
+  if (!confirm(`「${title}」을(를) 등록할까요?\n${goalText(kind, param, target)}\n보상: ${rewardText(row.reward)}`)) return;
+  $("qSave").disabled = true;
+  const { error } = await sb.from("missions").insert(row);
+  $("qSave").disabled = false;
+  if (error) { toast("등록 실패: " + error.message); return; }
+  toast("등록했습니다. 참가자 화면에 1분 안에 나타납니다.");
+  $("qTitle").value = ""; $("qDescr").value = "";
+  loadMissions();
+}
+
+async function loadMissions() {
+  const since = new Date(Date.now() - 21 * 86400e3).toISOString();
+  const { data, error } = await sb.from("missions").select("*").gte("ends_at", since).order("starts_at", { ascending: false });
+  if (error) { $("qList").innerHTML = `<div class="notice">불러오기 실패: ${esc(error.message)}</div>`; return; }
+  if (!data.length) { $("qList").innerHTML = `<div class="empty">등록된 임무가 없습니다.</div>`; return; }
+  const now = Date.now();
+  $("qList").innerHTML = data.map((m) => {
+    const st = now < Date.parse(m.starts_at) ? "예정" : now > Date.parse(m.ends_at) ? "끝남" : "진행 중";
+    const prog = m.scope === "commune" ? ` · 진행 <b>${m.progress} / ${m.target}</b>${m.progress >= m.target ? " (달성)" : ""}` : "";
+    return `<div class="q-row">
+      <div><span class="tag ${st === "진행 중" ? "on" : ""}">${st}</span><span class="tag">${m.scope === "weekly" ? "주간 의뢰" : "공동 임무"}</span><span class="t">${esc(m.title)}</span></div>
+      <div class="meta">${esc(goalText(m.kind, m.param, m.target))}${prog}</div>
+      <div class="meta">${fmt(m.starts_at)} ~ ${fmt(m.ends_at)} · 보상 ${esc(rewardText(m.reward))}</div>
+      <div class="pf-inline">${st !== "끝남" ? `<button class="btn btn-small" data-qend="${m.id}">지금 끝내기</button>` : ""}<button class="btn btn-small btn-ghost" data-qdel="${m.id}">삭제</button></div>
+    </div>`;
+  }).join("");
+  $("qList").querySelectorAll("[data-qend]").forEach((b) => b.onclick = async () => {
+    if (!confirm("이 임무를 지금 끝낼까요? 이미 달성한 사람은 보상을 받을 수 있습니다.")) return;
+    const { error: e } = await sb.from("missions").update({ ends_at: new Date().toISOString() }).eq("id", +b.dataset.qend);
+    if (e) toast("실패: " + e.message); else { toast("끝냈습니다."); loadMissions(); }
+  });
+  $("qList").querySelectorAll("[data-qdel]").forEach((b) => b.onclick = async () => {
+    if (!confirm("삭제할까요? 참가자 화면에서 바로 사라지고, 아직 안 받은 보상도 받을 수 없게 됩니다.")) return;
+    const { error: e } = await sb.from("missions").delete().eq("id", +b.dataset.qdel);
+    if (e) toast("실패: " + e.message); else { toast("삭제했습니다."); loadMissions(); }
+  });
+}
+
+// ============================================================
+//  맵 해금
+// ============================================================
+let gateState = {};
+async function loadGates() {
+  const { data, error } = await sb.from("gates").select("id, opened, opened_at");
+  if (error) { $("gList").innerHTML = `<div class="notice">불러오기 실패: ${esc(error.message)}</div>`; return; }
+  gateState = Object.fromEntries(data.map((g) => [g.id, g]));
+  renderGates();
+}
+function renderGates() {
+  const stages = [...new Set(GATES.map((g) => g.stage))].sort();
+  $("gList").innerHTML = stages.map((st) => {
+    const gs = GATES.filter((g) => g.stage === st);
+    const anyOpen = gs.some((g) => gateState[g.id] && gateState[g.id].opened);
+    return `<div class="g-stage"><h4>${st}단계 관문 ${anyOpen ? "· <span style='color:var(--gold)'>통과 가능</span>" : "· 막힘"}</h4>
+      ${gs.map((g) => {
+        const s = gateState[g.id], open = !!(s && s.opened);
+        const code = (g.type === "bridge" ? "Q" : "Z") + (open ? "o" : "");
+        return `<div class="g-row">
+          <span class="seal t-${code}">${TILES[code].hanja}</span>
+          <div class="info"><b>${esc(g.name)}</b><span>${g.type === "bridge" ? "다리 놓기" : "경공 절벽"} · 좌표 ${g.x + 1}-${g.y + 1}${open && s.opened_at ? " · " + fmt(s.opened_at) + " 열림" : ""}</span></div>
+          <button class="btn btn-small ${open ? "btn-ghost" : "btn-main"}" data-gate="${g.id}" data-open="${open ? 0 : 1}">${open ? "다시 막기" : (g.type === "bridge" ? "다리 놓기" : "길 열기")}</button>
+        </div>`;
+      }).join("")}</div>`;
+  }).join("");
+  $("gList").querySelectorAll("[data-gate]").forEach((b) => b.onclick = () => toggleGate(b.dataset.gate, b.dataset.open === "1"));
+  renderGateMap();
+}
+async function toggleGate(id, open) {
+  const g = GATES.find((x) => x.id === id);
+  if (!confirm(open ? `「${g.name}」을(를) 열까요?\n모든 참가자가 이 관문을 지나갈 수 있게 됩니다.` : `「${g.name}」을(를) 다시 막을까요?`)) return;
+  const { error } = await sb.from("gates").upsert({ id, opened: open, opened_at: open ? new Date().toISOString() : null });
+  if (error) { toast("실패: " + error.message); return; }
+  toast(open ? "열었습니다. 참가자 화면에 1분 안에 소식이 뜹니다." : "다시 막았습니다.");
+  loadGates();
+}
+function renderGateMap() {
+  let html = "";
+  for (let y = 0; y < MAP.length; y++) for (let x = 0; x < MAP[y].length; x++) {
+    let c = MAP[y][x];
+    const g = GATES.find((q) => q.x === x && q.y === y);
+    if (g && gateState[g.id] && gateState[g.id].opened) c += "o";
+    const t = TILES[c];
+    html += `<i class="t-${c}" title="${g ? esc(g.name) : t.name} (${x + 1}-${y + 1})">${c === "C" || c === "X" || c === "E" || g ? t.hanja : ""}</i>`;
+  }
+  $("gMap").innerHTML = html;
 }

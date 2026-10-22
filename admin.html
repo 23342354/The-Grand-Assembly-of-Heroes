@@ -42,6 +42,27 @@
     .sent-table td { border-bottom: 1px solid var(--line-soft); padding: 7px 8px; vertical-align: top; }
     .bar-line { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
     .bar-line input { flex: 1; min-width: 0; font-size: 14px; }
+    .adm-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); position: relative; z-index: 1; }
+    .seg { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+    .seg small { color: var(--faint); margin-left: 4px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .chk { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13.5px; color: var(--text); }
+    .chk label { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+    .chk input { width: auto !important; margin: 0; }
+    .q-row { border: 1px solid var(--line-soft); background: var(--card-bg); padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+    .q-row .t { font-weight: 700; font-size: 14.5px; }
+    .q-row .meta { color: var(--dim); }
+    .q-row .tag { display: inline-block; font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--line); margin-right: 6px; }
+    .q-row .tag.on { color: var(--btn-main-text); background: var(--btn-main-1); border-color: var(--btn-main-1); }
+    .g-stage { margin-bottom: 14px; }
+    .g-stage h4 { margin: 0 0 6px; font-size: 14px; }
+    .g-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-soft); background: var(--card-bg); margin-bottom: 6px; }
+    .g-row .seal { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-size: 18px; flex-shrink: 0; }
+    .g-row .info { flex: 1; min-width: 0; font-size: 13.5px; }
+    .g-row .info b { display: block; font-size: 14.5px; }
+    .g-row .info span { color: var(--dim); }
+    .adm-map { display: grid; grid-template-columns: repeat(21, 1fr); gap: 1px; max-width: 420px; }
+    .adm-map i { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-style: normal; font-family: var(--font-title); font-size: 11px; }
     @media (max-width: 860px) { .adm-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -76,6 +97,13 @@
   </section>
 
   <main id="admMain" class="adm-wrap hidden">
+    <nav class="adm-tabs">
+      <button class="pf-tab active" data-at="mail">우편 · 물품 지급</button>
+      <button class="pf-tab" data-at="mission">주간 의뢰 · 공동 임무</button>
+      <button class="pf-tab" data-at="gates">맵 해금</button>
+    </nav>
+
+    <div id="at-mail" class="adm-sec">
     <div class="adm-grid">
       <section class="panel">
         <h3 class="panel-title">받는 이 <small id="selCount">0명 선택</small></h3>
@@ -103,6 +131,65 @@
       <h3 class="panel-title">아직 받지 않은 우편 <small>받는 이가 「받기」를 누르면 여기서 사라집니다</small></h3>
       <div id="sentBox"><div class="empty">불러오는 중…</div></div>
     </section>
+    </div>
+
+    <!-- 주간 의뢰 · 공동 임무 -->
+    <div id="at-mission" class="adm-sec hidden">
+      <div class="adm-grid">
+        <section class="panel">
+          <h3 class="panel-title">새로 등록</h3>
+          <div class="seg">
+            <label><input type="radio" name="mScope" value="weekly" checked> 주간 의뢰 <small>각자 채우는 개인 목표</small></label>
+            <label><input type="radio" name="mScope" value="commune"> 공동 임무 <small>모두의 기여를 합산</small></label>
+          </div>
+          <label class="field">제목 (40자)<input id="qTitle" maxlength="40" placeholder="예: 흑선채 척후 소탕"></label>
+          <label class="field">설명 (선택 · 200자)<textarea id="qDescr" rows="2" maxlength="200" placeholder="예: 다리를 놓기 전에 강변의 척후부터 쓸어내라."></textarea></label>
+          <div class="two">
+            <label class="field">종류<select id="qKind">
+              <option value="slay">적 처치</option>
+              <option value="hunt">토벌 승리 (아무 적)</option>
+              <option value="search">지형 탐색</option>
+              <option value="reveal">새 땅 밝히기</option>
+              <option value="deliver">재료 납품</option>
+              <option value="cook">요리 짓기</option>
+              <option value="forge">장비 벼리기</option>
+            </select></label>
+            <label class="field">목표 수<input id="qTarget" type="number" min="1" value="20"></label>
+          </div>
+          <div class="field" id="qParamBox"></div>
+          <div class="two">
+            <label class="field">시작<input id="qStart" type="datetime-local"></label>
+            <label class="field">끝<input id="qEnd" type="datetime-local"></label>
+          </div>
+          <div class="field">보상 (받는 사람마다)</div>
+          <div class="two"><label class="field" style="margin-top:0">공적<input id="qMerit" type="number" min="0" value="10"></label><span></span></div>
+          <div id="qRewardRows"></div>
+          <button class="btn btn-small btn-ghost" id="qAddReward">＋ 보상 물품 더하기</button>
+          <div class="summary" id="qSummary"></div>
+          <div class="pf-foot" style="margin-top:12px"><button class="btn btn-main" id="qSave">등록하기</button></div>
+        </section>
+
+        <section class="panel">
+          <h3 class="panel-title">등록된 임무 <small>최근 3주</small></h3>
+          <div id="qList"><div class="empty">불러오는 중…</div></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 맵 해금 -->
+    <div id="at-gates" class="adm-sec hidden">
+      <div class="adm-grid">
+        <section class="panel">
+          <h3 class="panel-title">관문 <small>열면 참가자 화면에 1분 안에 소식이 뜹니다</small></h3>
+          <div id="gList"></div>
+        </section>
+        <section class="panel">
+          <h3 class="panel-title">전체 지도 <small>운영진만 보이는 전도</small></h3>
+          <div id="gMap" class="adm-map"></div>
+          <div class="minimap-legend" style="margin-top:8px"><span><i class="lg" style="background:var(--tV-bg)"></i>급류</span><span><i class="lg" style="background:var(--tK-bg)"></i>절벽</span><span><i class="lg" style="background:var(--tQ-fg)"></i>닫힌 관문</span><span><i class="lg" style="background:var(--tQo-fg)"></i>열린 관문</span></div>
+        </section>
+      </div>
+    </div>
   </main>
 
   <div id="toast" class="toast"></div>

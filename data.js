@@ -16,32 +16,73 @@ const RULES = {
 
 // ---------- 지도 (21 x 21) ----------
 // 한 글자가 한 칸입니다. 아래 TILES의 글자와 연결됩니다.
-// C = 임시 기지(시작점), E = 버려진 야영지(휴식 가능), X = 흑선탑
+// C = 임시 기지(맨 왼쪽 아래), E = 버려진 야영지(휴식), X = 흑선탑(오른쪽 위)
+// V = 흑수 급류, K = 단애 절벽 → 지나갈 수 없는 칸. 지도를 4겹으로 나눕니다.
+// Q = 다리를 놓을 자리, Z = 경공으로 오를 자리 → 운영진이 admin.html에서 열어야 지나갈 수 있습니다.
 // 화면에는 내 주변 5 x 5 칸만 보이고, 걸어가면 지도가 따라 움직입니다.
-const MAP_VERSION = 2;   // 지도를 크게 바꾸면 이 숫자를 1 올리세요 (모두 기지에서 다시 시작)
+const MAP_VERSION = 3;   // 지도를 크게 바꾸면 이 숫자를 1 올리세요 (모두 기지에서 다시 시작)
 const VIEW = 5;          // 화면에 보이는 칸 수 (홀수: 5, 7, 9 …)
 const MAP = [
-  "PPPPPMMMMBBOOOOOOOPPP",
-  "PPFFFMMMBBBOOOOOOOOPP",
-  "PFFFRMMTBBOOOOOOOOXOP",
-  "FFFRRMMMBBBOOOOOOOOOP",
-  "FFRRRFMMMBBBOOTOOOOPP",
-  "FFFRFFFMMMBBEOOOOOPPP",
-  "WFFFFFTFMMMBBBOOOPPPP",
-  "WWFFRRFFFMMMBBBOOPPPP",
-  "WWWFFRRFFFMMMBBBPPPPW",
-  "FWWWFFFRFFFMMMBPPPPWW",
-  "FFWWWFFFRRFFTMMPPPWWW",
-  "FFFWWWFFFERFFFPPPWWWF",
-  "RFFFWWWFFFRFFPPPWWWFF",
-  "RRFFFWWWFFFFPPPWWWFFF",
-  "FRRFFFWWWFFPPPWWWFFRR",
-  "FFRRFFFWWWPPPWWWFFFRF",
-  "FFFRRFFFWWWWWWWFFFFFF",
-  "WFFFRRFFFFWWWFFFRRFFF",
-  "WWCFFFRFFFFFFFFFFRFFF",
-  "WWWFFFFFFFRRFFFFFFFFF",
-  "WWWWFFFFFFFFFFFFFFFFF",
+  "RBWVWWPBBKOOOPOOOOPPO",
+  "BTBWVVOOPKKPPOOOOOOXO",
+  "RPPTWVOBOPOKPOOOOOOOO",
+  "KBMBWVWWBPOOZOOOOOOOO",
+  "FKRBRWVVWBPOPKKOOOOOO",
+  "FFKMBBBWQWPPPBKOOOOOP",
+  "MFFKRMPBWVOPPOBKKOPPO",
+  "RFFFKBMMBPVBPBEPOKPPO",
+  "MWFFRKPBMBBVBTPBOPZOP",
+  "VVFRRRKPBEMBVWBPPPOKO",
+  "WRQRRRMZMMMMPVPPPPOKP",
+  "FFMVWRRMKMBTMWVPPPPKK",
+  "RFWVWMFMKKPPBWVVOPPPP",
+  "RWWVVERWRWKBTBWMQWPOO",
+  "FWRWFVFFFMKMPPTPPVVWB",
+  "RFFFWVVFFFFKBPBTMMVVW",
+  "RRFFFWFQFRFRZRBMMMWBV",
+  "WRFFFFFFVVWFRKKMBBPPO",
+  "FFFFFFFWWRVWRFRKKBBMM",
+  "WFFFFWRRRWVWRMFWKMBBB",
+  "CWWFRFRWRWWVRFMWFKMBR",
+];
+
+// ---------- 해금 지점 (다리 / 경공) ----------
+// stage: 몇 번째 관문인지 (1 → 4 순서로 탑에 가까워짐)
+// x, y: 지도 좌표 (왼쪽 위가 0,0). MAP에서 그 자리 글자가 Q(다리) 또는 Z(경공)여야 합니다.
+// 같은 단계에 두 곳이 있어서, 운영진이 한 곳만 열어도, 둘 다 열어도 됩니다.
+const GATES = [
+  { id: "q1a", stage: 1, type: "bridge", x: 2, y: 10,
+    name: "검은나루 외나무다리",
+    locked: "외나무다리를 놓을 자리. 물살이 거세 지금은 건널 수 없다.",
+    open: "굵은 통나무를 엮어 다리를 놓았다." },
+  { id: "q1b", stage: 1, type: "bridge", x: 7, y: 16,
+    name: "버드나무 여울목",
+    locked: "버드나무가 늘어진 여울. 징검돌이 떠내려가 건널 수 없다.",
+    open: "새 징검돌을 놓아 여울을 건널 수 있게 되었다." },
+  { id: "z2a", stage: 2, type: "climb", x: 7, y: 10,
+    name: "매바위 벼랑",
+    locked: "매가 둥지를 튼 벼랑. 경공 없이는 오를 수 없다.",
+    open: "벼랑에 쐐기를 박고 줄을 내려 경공으로 오를 수 있다." },
+  { id: "z2b", stage: 2, type: "climb", x: 12, y: 16,
+    name: "칡넝쿨 절벽",
+    locked: "칡넝쿨이 얽힌 절벽. 아직 발 디딜 곳이 없다.",
+    open: "넝쿨을 엮어 디딤줄을 만들었다. 몸을 날려 오를 수 있다." },
+  { id: "q3a", stage: 3, type: "bridge", x: 8, y: 5,
+    name: "흑수 돌다리 터",
+    locked: "무너진 돌다리의 교각만 남아 있다.",
+    open: "교각 위에 판재를 깔아 다리를 이었다." },
+  { id: "q3b", stage: 3, type: "bridge", x: 16, y: 13,
+    name: "옛 관문 나루",
+    locked: "흑선채가 부교를 불태운 자리.",
+    open: "새 부교를 띄워 나루를 건널 수 있다." },
+  { id: "z4a", stage: 4, type: "climb", x: 12, y: 3,
+    name: "단애 잔도 끝",
+    locked: "잔도가 끊긴 단애. 아찔한 허공뿐이다.",
+    open: "끊긴 잔도에 널을 이어 경공으로 건너뛸 수 있다." },
+  { id: "z4b", stage: 4, type: "climb", x: 18, y: 8,
+    name: "흑선채 망루 절벽",
+    locked: "망루가 내려다보는 절벽. 오르면 들킨다.",
+    open: "망루를 무력화했다. 이제 절벽을 타고 오를 수 있다." },
 ];
 
 // ---------- 지형 ----------
@@ -59,6 +100,32 @@ const TILES = {
     name: "버려진 야영지", hanja: "幕", danger: 0, rest: true,
     desc: "누군가 먼저 다녀간 자리. 꺼진 화톳불 둘레로 돌이 둥글게 놓여 있고, 바람막이 천 한 장이 아직 말뚝에 매달려 있다. 공방은 없지만 하룻밤 쉬어 갈 수는 있다.",
     drops: [], monsters: [], events: [],
+  },
+  V: {
+    name: "흑수 급류", hanja: "川", danger: 0, block: true,
+    desc: "검은 물이 바위를 때리며 소리 없이 끓는다. 헤엄쳐 건너려 했던 이들의 이름은 남아 있지 않다.",
+    drops: [], monsters: [], events: [],
+  },
+  K: {
+    name: "단애 절벽", hanja: "崖", danger: 0, block: true,
+    desc: "깎아지른 바위벽이 하늘을 가린다. 손 디딜 틈 하나 보이지 않는다.",
+    drops: [], monsters: [], events: [],
+  },
+  Q: {
+    name: "다리 놓을 자리", hanja: "渡", danger: 0, gate: true,
+    desc: "", drops: [], monsters: [], events: [],
+  },
+  Qo: {
+    name: "놓인 다리", hanja: "橋", danger: 0,
+    desc: "", drops: [], monsters: [], events: [],
+  },
+  Z: {
+    name: "오를 수 있는 절벽", hanja: "壁", danger: 0, gate: true,
+    desc: "", drops: [], monsters: [], events: [],
+  },
+  Zo: {
+    name: "경공로", hanja: "躍", danger: 0,
+    desc: "", drops: [], monsters: [], events: [],
   },
   F: {
     name: "고목림", hanja: "林", danger: 1,
@@ -315,15 +382,5 @@ const QUEST_REWARDS = [
 const DAILY_BONUS = { merit: 12, items: { blackiron: 2, redling: 1 } };
 
 // ============================================================
-//  공동 임무 — 참가자 전원의 기여를 합산합니다 (로그인 필요)
-//  날짜마다 아래 목록을 차례로 돌아갑니다.
-//  kind: slay(mids 중 하나 처치) / deliver(item 납품) / reveal(새 땅) / search(아무 지형 탐색)
+//  공동 임무 · 주간 의뢰 — 운영진이 admin.html에서 등록합니다.
 // ============================================================
-const COMMUNE = [
-  { title: "흑선채 척후 소탕", desc: "흑선채 졸개, 궁수, 백부장을 합쳐서 처치하라.", kind: "slay", mids: ["grunt", "archer", "captain"], target: 40 },
-  { title: "신분패 회수",     desc: "흑선 신분패를 기지에 납품하라. 놈들의 수를 헤아릴 수 있다.", kind: "deliver", item: "token", target: 30 },
-  { title: "안개 걷기",       desc: "모두 함께 새 땅을 밝혀라.", kind: "reveal", target: 80 },
-  { title: "약재 비축",       desc: "마른 약초를 기지에 납품하라. 반생약문이 상처 입은 이들을 돌본다.", kind: "deliver", item: "herb", target: 50 },
-  { title: "들짐승 몰이",     desc: "들개와 늑대를 합쳐서 처치하라. 길이 안전해진다.", kind: "slay", mids: ["dog", "wolf"], target: 40 },
-];
-const COMMUNE_REWARD = { merit: 15, items: { blackiron: 1, honey: 2, redling: 1 } };

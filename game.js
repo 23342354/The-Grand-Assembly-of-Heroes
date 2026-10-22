@@ -39,8 +39,17 @@ function findTile(ch) {
 }
 const CAMP = findTile("C");
 const TOWER = findTile("X");
-const tileAt = (x, y) => (MAP[y] && MAP[y][x]) ? TILES[MAP[y][x]] : null;
-const tileCode = (x, y) => MAP[y][x];
+// 해금 지점(다리·경공): 열렸으면 "Qo"/"Zo" 지형으로 바뀐다
+let openGates = new Set();
+const GATE_AT = Object.fromEntries(GATES.map((g) => [g.x + "," + g.y, g]));
+const gateAt = (x, y) => GATE_AT[x + "," + y];
+function tileCode(x, y) {
+  const c = MAP[y][x];
+  const g = (c === "Q" || c === "Z") ? gateAt(x, y) : null;
+  return g && openGates.has(g.id) ? c + "o" : c;
+}
+const tileAt = (x, y) => (MAP[y] && MAP[y][x]) ? TILES[tileCode(x, y)] : null;
+const passable = (x, y) => { const t = tileAt(x, y); return !!t && !t.block && !t.gate; };
 
 // ---------- 전역 상태 ----------
 let S = null;            // 내 캐릭터 상태 (저장 대상)
@@ -85,7 +94,7 @@ function newState(name) {
     buff: null,
     recipes: [],
     merit: 0, kills: 0, wardenKills: 0,
-    daily: null, commune: null,
+    daily: null, missions: {}, knownGates: [],
     giftLog: [], sentLog: [], mailLog: [],
     profile: { aff: "", intro: "", credit: "" },
     created: Date.now(),
@@ -134,8 +143,8 @@ function removeItem(id, n = 1) { S.inv[id] -= n; if (S.inv[id] <= 0) delete S.in
 function itemsText(items) { return Object.entries(items).map(([id, n]) => `${ITEMS[id] ? ITEMS[id].name : id} ×${n}`).join(", "); }
 function grant(r) {
   S.merit += r.merit || 0;
-  for (const [id, n] of Object.entries(r.items || {})) addItem(id, n);
-  return `공적 +${r.merit || 0}${r.items ? " · " + itemsText(r.items) : ""}`;
+  for (const [id, n] of Object.entries(r.items || {})) if (ITEMS[id] && n > 0) addItem(id, Math.floor(n));
+  return grantText(r);
 }
 
 // ============================================================
@@ -280,6 +289,7 @@ function enterGame(isNew) {
   if (isNew) {
     log("도성의 불빛이 등 뒤로 멀어진 지 사흘째.", "story");
     log("흑선채의 중심, 검은 탑이 서 있다는 땅에서 한참 떨어진 곳. 무너진 역참에 임시 기지를 세웠다. 탑은 북동쪽 끝 어딘가에 있다고들 한다. 지도는 아직 백지에 가깝다.", "story");
+    log("흑수 급류와 단애 절벽이 탑으로 가는 길을 네 겹으로 막고 있다. 다리를 놓고 절벽에 길을 내는 일은 맹주의 명이 떨어져야 시작된다. 그때까지는 열린 땅을 샅샅이 뒤져 힘을 길러라.", "story");
     log("한 칸씩 나아가 땅을 밝혀라. 재료를 모아 기지에서 밥을 짓고 칼을 벼려라. 길 중간의 버려진 야영지에서는 숨을 돌릴 수 있다. 그리고 언젠가는 — 탑의 문을 두드려라.", "story");
     log(`행동력은 하루 ${RULES.dailyAP}. 한국 시간 자정마다 돌아온다. 일일 임무도 그때 바뀐다.`, "sys");
   } else {
@@ -290,7 +300,8 @@ function enterGame(isNew) {
   checkDailyReset();
   renderAll();
   save();
-  if (mode === "online") { checkGifts(); loadCommune(); checkMail(); }
+  loadGates(); loadMissions();
+  if (mode === "online") { checkGifts(); checkMail(); }
 }
 
 // ============================================================
@@ -333,14 +344,15 @@ function renderMap() {
   let html = "";
   for (let y = y0; y < y0 + vh; y++) {
     for (let x = x0; x < x0 + vw; x++) {
-      const c = MAP[y][x];
+      const c = tileCode(x, y);
+      const g = gateAt(x, y);
       const seen = revealed.has(key(x, y));
       const cls = ["tile"];
       if (seen) cls.push("t-" + c); else { cls.push("fog"); if (c === "X") cls.push("rumor"); }
       if (x === S.x && y === S.y) cls.push("here");
       else if (isNear(x, y)) cls.push("near");
       const label = seen ? TILES[c].hanja : "";
-      const title = seen ? TILES[c].name : (c === "X" ? "흑선탑이 있다는 소문의 자리" : "안개");
+      const title = seen ? (g ? `${g.stage}단계 관문 · ${g.name}` : TILES[c].name) : (c === "X" ? "흑선탑이 있다는 소문의 자리" : "안개");
       html += `<div class="${cls.join(" ")}" data-x="${x}" data-y="${y}" title="${title}">${label}</div>`;
     }
   }
@@ -354,7 +366,7 @@ function renderMinimap(revealed, x0, y0, vw, vh) {
   let html = "";
   for (let y = 0; y < MAP_H; y++) {
     for (let x = 0; x < MAP_W; x++) {
-      const c = MAP[y][x];
+      const c = tileCode(x, y);
       const cls = ["mm"];
       if (revealed.has(key(x, y))) cls.push("t-" + c);
       else { cls.push("fog"); if (c === "X") cls.push("rumor"); }
@@ -389,6 +401,9 @@ document.addEventListener("keydown", (e) => {
 function renderTile() {
   const t = tileAt(S.x, S.y);
   const code = tileCode(S.x, S.y);
+  const g = gateAt(S.x, S.y);
+  const tName = g ? `${t.name} · ${g.name}` : t.name;
+  const tDesc = g ? (openGates.has(g.id) ? g.open : g.locked) : t.desc;
   const dangerStr = t.danger ? "◆".repeat(t.danger) + "◇".repeat(5 - t.danger) : "안전";
   let actions = "";
   if (t.rest) actions += `<button class="btn" id="actRest">휴식 <small>기혈 회복</small></button>`;
@@ -401,11 +416,11 @@ function renderTile() {
     <div class="tile-head">
       <div class="tile-seal t-${code}">${t.hanja}</div>
       <div>
-        <div class="tile-name">${t.name}</div>
+        <div class="tile-name">${tName}</div>
         <div class="danger">위험 <b>${dangerStr}</b> · 좌표 ${S.x + 1}-${S.y + 1}</div>
       </div>
     </div>
-    <div class="tile-desc">${t.desc}</div>
+    <div class="tile-desc">${tDesc}</div>
     <div class="actions">${actions}</div>${buff}`;
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   on("actRest", rest);
@@ -460,6 +475,7 @@ function reveal(x, y) {
 function move(nx, ny) {
   if (busy) return;
   if (!tileAt(nx, ny) || !isNear(nx, ny)) return;
+  if (!passable(nx, ny)) { bumpInto(nx, ny); return; }
   if (!spendAP(RULES.moveCost)) return;
   S.x = nx; S.y = ny;
   const t = tileAt(nx, ny);
@@ -476,6 +492,7 @@ function move(nx, ny) {
   } else {
     log(`${t.name}(으)로 이동했다.`, "sys");
   }
+  revealBarriersAround(nx, ny);
   save();
   renderAll();
   // 이동 중 매복 (탑에서는 일어나지 않음)
@@ -483,6 +500,48 @@ function move(nx, ny) {
     log("인기척. 미처 칼을 뽑기도 전에 놈들이 덮쳐온다!", "bad");
     setTimeout(() => hunt(true), 400);
   }
+}
+
+// 강·절벽·관문은 옆에 다가가면 저절로 보인다
+function revealBarriersAround(x, y) {
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const t = tileAt(x + dx, y + dy);
+    if (t && (t.block || t.gate || gateAt(x + dx, y + dy))) reveal(x + dx, y + dy);
+  }
+}
+
+// 지나갈 수 없는 칸에 부딪혔을 때 (행동력은 쓰지 않는다)
+function bumpInto(x, y) {
+  reveal(x, y);
+  const t = tileAt(x, y), g = gateAt(x, y);
+  if (g) {
+    log(`<b>${g.stage}단계 관문 · ${g.name}</b> — ${g.locked}`, "story");
+    toast(g.type === "bridge" ? "아직 다리가 없다. 운영진이 다리를 놓아야 건널 수 있다." : "아직 오를 수 없다. 운영진이 길을 열어야 경공으로 오를 수 있다.");
+  } else if (t.block) {
+    toast(MAP[y][x] === "V" ? "급류가 앞을 가로막는다. 다리 놓을 자리를 찾아야 한다." : "절벽이 앞을 막아선다. 오를 수 있는 곳을 찾아야 한다.");
+  }
+  save(); renderMap();
+}
+
+// ---------- 해금 상태 불러오기 ----------
+async function loadGates() {
+  if (!sb) return;
+  const { data, error } = await sb.from("gates").select("id, opened");
+  if (error) return;
+  const now = new Set((data || []).filter((g) => g.opened).map((g) => g.id));
+  if (S) {
+    const known = new Set(S.knownGates || []);
+    for (const g of GATES) {
+      if (now.has(g.id) && !known.has(g.id)) {
+        log(`◈ 소식 — ${g.stage}단계 관문 「${g.name}」${g.type === "bridge" ? "에 다리가 놓였다" : "을(를) 경공으로 오를 수 있게 되었다"}. ${g.open}`, "lvl");
+        toast(`${g.stage}단계 관문 「${g.name}」이(가) 열렸다!`);
+      }
+    }
+    S.knownGates = [...now];
+  }
+  const changed = [...now].sort().join() !== [...openGates].sort().join();
+  openGates = now;
+  if (S && changed) { renderMap(); renderTile(); save(); }
 }
 
 // 기지로 귀환: 행동력 없이 곧장 임시 기지로 (밝혀 둔 땅은 그대로)
@@ -757,7 +816,12 @@ function ensureDaily() {
   const today = todayKST();
   if (S.daily && S.daily.date === today) return;
   const rng = seeded(today + "|" + (uid || S.name));
-  const pool = QUESTS.map((q, i) => ({ q, r: rng(), i })).sort((a, b) => a.r - b.r);
+  // 아직 못 가 본 지형·적은 임무로 나오지 않게
+  const seen = new Set([...(S.seenTypes || []), "F", "W", "R"]);
+  const okMids = new Set();
+  for (const c of seen) for (const m of (TILES[c] && TILES[c].monsters) || []) okMids.add(m);
+  const doable = (q) => (q.kind !== "search" || seen.has(q.tile)) && (q.kind !== "slay" || okMids.has(q.mid));
+  const pool = QUESTS.filter(doable).map((q, i) => ({ q, r: rng(), i })).sort((a, b) => a.r - b.r);
   const picked = [], kinds = new Set();
   for (const { q } of pool) {
     if (kinds.has(q.kind)) continue;
@@ -767,8 +831,6 @@ function ensureDaily() {
   }
   const hadBefore = !!S.daily;
   S.daily = { date: today, quests: picked, bonus: false };
-  S.commune = { date: today, contrib: 0, claimed: false };
-  communeProgress = null;
   if (hadBefore) log("기지 게시판에 오늘의 임무가 새로 붙었다.", "quest");
   save();
 }
@@ -797,9 +859,6 @@ function questSub(q) {
   }[q.kind] || "";
 }
 
-function todayCommune() {
-  return COMMUNE[((dayNumber(todayKST()) % COMMUNE.length) + COMMUNE.length) % COMMUNE.length];
-}
 
 // 게임 속 사건을 임무 진행도에 반영
 function questEvent(kind, info = {}, amount = 1) {
@@ -819,14 +878,21 @@ function questEvent(kind, info = {}, amount = 1) {
     changed = true;
     if (q.have >= q.n) { q.done = true; log(`◈ 임무 완수 — 「${questTitle(q)}」. 임무 탭에서 보상을 받으라.`, "quest"); }
   }
-  // 공동 임무
-  const c = todayCommune();
-  const hitC =
-    (c.kind === "slay" && kind === "kill" && c.mids.includes(info.mid)) ||
-    (c.kind === "reveal" && kind === "reveal") ||
-    (c.kind === "search" && kind === "search");
-  if (hitC) communeAdd(amount);
-  if (changed || hitC) { updateDots(); if (currentTab === "quest") renderQuest(); }
+  // 주간 의뢰 · 공동 임무
+  for (const m of missions) {
+    if (!isActive(m) || m.kind === "deliver" || !missionMatches(m, kind, info)) continue;
+    const st = mstate(m);
+    if (m.scope === "weekly") {
+      if (st.have >= m.target) continue;
+      st.have = Math.min(m.target, st.have + amount);
+      if (st.have >= m.target) log(`◈ 주간 의뢰 완수 — 「${esc(m.title)}」. 임무 탭에서 보상을 받으라.`, "quest");
+    } else if (mode === "online") {
+      st.contrib += amount;
+      queueCommune(m.id, amount);
+    }
+    changed = true;
+  }
+  if (changed) { save(); updateDots(); if (currentTab === "quest") renderQuest(); }
 }
 
 function claimQuest(i) {
@@ -852,60 +918,143 @@ function deliverQuest(i) {
   claimQuest(i);
 }
 
-// ---------- 공동 임무 (Supabase의 commune 표에 합산) ----------
-let communeProgress = null;   // 서버에서 받아온 오늘의 합계
-let communePending = 0;
+// ---------- 주간 의뢰 · 공동 임무 (운영진이 admin.html에서 등록) ----------
+let missions = [];
+const pendingCommune = {};
 let communeTimer = null;
 
-function communeAdd(n) {
-  if (mode !== "online" || !S.commune) return;
-  S.commune.contrib += n;
-  communePending += n;
+const isActive = (m) => Date.parse(m.starts_at) <= Date.now() && Date.now() <= Date.parse(m.ends_at);
+function mstate(m) {
+  S.missions = S.missions || {};
+  return S.missions[m.id] || (S.missions[m.id] = { have: 0, contrib: 0, claimed: false });
+}
+function missionMatches(m, kind, info) {
+  const list = (m.param || "").split(",").map((x) => x.trim()).filter(Boolean);
+  switch (m.kind) {
+    case "hunt": return kind === "win";
+    case "slay": return kind === "kill" && (!list.length || list.includes(info.mid));
+    case "search": return kind === "search" && (!list.length || list.includes(info.tile));
+    case "reveal": return kind === "reveal";
+    case "cook": return kind === "cook";
+    case "forge": return kind === "forge";
+  }
+  return false;
+}
+function missionGoal(m) {
+  const list = (m.param || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const names = (src, k) => list.map((id) => (src[id] && src[id][k]) || id).join("·");
+  switch (m.kind) {
+    case "hunt": return `토벌 ${m.target}회 승리`;
+    case "slay": return `${list.length ? names(MONSTERS, "name") : "아무 적"} ${m.target}마리 처치`;
+    case "search": return `${list.length ? names(TILES, "name") : "아무 지형"} 탐색 ${m.target}회`;
+    case "reveal": return `새 땅 ${m.target}칸 밝히기`;
+    case "deliver": return `${ITEMS[m.param] ? ITEMS[m.param].name : m.param} ${m.target}개 납품`;
+    case "cook": return `요리 ${m.target}번 짓기`;
+    case "forge": return `장비 ${m.target}개 벼리기`;
+  }
+  return "";
+}
+function dueText(m) {
+  const end = Date.parse(m.ends_at), start = Date.parse(m.starts_at), now = Date.now();
+  if (now < start) return `${fmtTime(m.starts_at)}부터`;
+  if (now > end) return "기한 끝남";
+  const h = Math.floor((end - now) / 3600e3);
+  return `~${fmtTime(m.ends_at)} (${h >= 24 ? Math.floor(h / 24) + "일 남음" : h + "시간 남음"})`;
+}
+
+async function loadMissions() {
+  if (!sb) return;
+  const since = new Date(Date.now() - 3 * 86400e3).toISOString();
+  const { data, error } = await sb.from("missions").select("*").gte("ends_at", since).order("ends_at");
+  if (error) return;
+  missions = data || [];
+  updateDots();
+  if (currentTab === "quest") renderQuest();
+}
+
+function queueCommune(id, n) {
+  pendingCommune[id] = (pendingCommune[id] || 0) + n;
   clearTimeout(communeTimer);
   communeTimer = setTimeout(flushCommune, 1200);
 }
-
 async function flushCommune() {
-  const day = S.commune.date;
-  while (communePending > 0) {
-    const chunk = Math.min(5, communePending);
-    communePending -= chunk;
-    const { data, error } = await sb.rpc("commune_add", { p_day: day, p_amount: chunk });
-    if (error) { toast("공동 임무 기록 실패: " + error.message); break; }
-    communeProgress = data;
+  for (const id of Object.keys(pendingCommune)) {
+    while (pendingCommune[id] > 0) {
+      const chunk = Math.min(5, pendingCommune[id]);
+      pendingCommune[id] -= chunk;
+      const { data, error } = await sb.rpc("mission_add", { p_id: +id, p_amount: chunk });
+      if (error) { pendingCommune[id] = 0; break; }
+      const m = missions.find((x) => x.id === +id);
+      if (m) m.progress = data;
+    }
+    delete pendingCommune[id];
   }
   save(); updateDots();
   if (currentTab === "quest") renderQuest();
 }
 
-async function loadCommune() {
-  if (mode !== "online") return;
-  const { data, error } = await sb.from("commune").select("progress").eq("day", todayKST()).maybeSingle();
-  if (error) return;
-  communeProgress = data ? data.progress : 0;
-  updateDots();
-  if (currentTab === "quest") renderQuest();
+function missionDone(m) {
+  const st = mstate(m);
+  return m.scope === "weekly" ? st.have >= m.target : (m.progress || 0) >= m.target;
 }
-
-function deliverCommune() {
-  const c = todayCommune();
-  if (c.kind !== "deliver") return;
+function canClaimMission(m) {
+  const st = mstate(m);
+  if (st.claimed || !missionDone(m)) return false;
+  return m.scope === "weekly" || st.contrib > 0;
+}
+function claimMission(id) {
+  const m = missions.find((x) => x.id === id);
+  if (!m || !canClaimMission(m)) return;
+  mstate(m).claimed = true;
+  log(`◈ ${m.scope === "weekly" ? "주간 의뢰" : "공동 임무"} 「${esc(m.title)}」 보상 — ${grant(m.reward || {})}`, "lvl");
+  save(); renderAll();
+}
+async function deliverMission(id) {
+  const m = missions.find((x) => x.id === id);
+  if (!m || m.kind !== "deliver" || !isActive(m)) return;
   if (!tileAt(S.x, S.y).camp) { toast("납품은 임시 기지에서만 할 수 있다."); return; }
-  const n = Math.floor(+$("communeQty").value || 0);
-  const have = S.inv[c.item] || 0;
+  const st = mstate(m);
+  const have = S.inv[m.param] || 0;
+  let n = Math.floor(+($("dq-" + id) ? $("dq-" + id).value : 0) || 0);
+  if (m.scope === "weekly") n = Math.min(n, m.target - st.have);
   if (n < 1 || n > have) { toast(`1개에서 ${have}개 사이로 정하라.`); return; }
-  removeItem(c.item, n);
-  communeAdd(n);
-  log(`공동 임무에 ${ITEMS[c.item].name} ${n}개를 보탰다.`, "quest");
+  removeItem(m.param, n);
+  if (m.scope === "weekly") {
+    st.have += n;
+    if (st.have >= m.target) log(`◈ 주간 의뢰 완수 — 「${esc(m.title)}」`, "quest");
+  } else {
+    if (mode !== "online") { addItem(m.param, n); toast("공동 임무는 로그인해야 참여할 수 있다."); return; }
+    st.contrib += n;
+    queueCommune(m.id, n);
+  }
+  log(`${ITEMS[m.param].name} ${n}개를 「${esc(m.title)}」에 납품했다.`, "quest");
   save(); renderAll();
 }
 
-function claimCommune() {
-  const c = todayCommune();
-  if (!S.commune || S.commune.claimed || S.commune.contrib < 1 || (communeProgress || 0) < c.target) return;
-  S.commune.claimed = true;
-  log(`◈ 공동 임무 「${c.title}」 달성! 모두의 힘이었다. — ${grant(COMMUNE_REWARD)}`, "lvl");
-  save(); renderAll();
+function missionCard(m) {
+  const st = mstate(m);
+  const weekly = m.scope === "weekly";
+  const prog = weekly ? st.have : (m.progress || 0);
+  const pct = Math.min(100, Math.round((prog / m.target) * 100));
+  const active = isActive(m);
+  let action = "";
+  if (st.claimed) action = `<span class="quest-sub">보상을 받았다</span>`;
+  else if (canClaimMission(m)) action = `<button class="btn btn-small btn-main" data-mclaim="${m.id}">보상 받기</button>`;
+  else if (missionDone(m)) action = `<span class="quest-sub">달성 — 기여한 사람만 보상을 받는다</span>`;
+  else if (m.kind === "deliver" && active && ITEMS[m.param]) {
+    const have = S.inv[m.param] || 0;
+    const need = weekly ? m.target - st.have : have;
+    action = `<span class="commune-row"><input id="dq-${m.id}" type="number" min="1" max="${Math.max(1, have)}" value="${Math.max(1, Math.min(have, need))}" style="width:70px">
+      <button class="btn btn-small" data-mdeliver="${m.id}" ${tileAt(S.x, S.y).camp && have ? "" : "disabled"} title="임시 기지에서 납품">납품 (보유 ${have})</button></span>`;
+  }
+  const mine = weekly ? "" : ` · 나의 기여 ${st.contrib}`;
+  return `<div class="${weekly ? "quest" : "commune"} ${missionDone(m) ? "done" : ""} ${st.claimed ? "claimed" : ""}">
+      <div class="${weekly ? "quest-title" : "commune-title"}">${esc(m.title)}</div>
+      <div class="quest-sub">${m.descr ? esc(m.descr) + " · " : ""}<b>${missionGoal(m)}</b></div>
+      <div class="quest-bar"><i style="width:${pct}%"></i></div>
+      <div class="quest-foot"><span>${weekly ? "" : "전체 "}${prog} / ${m.target}${mine}</span><span class="quest-sub">${dueText(m)}</span></div>
+      <div class="quest-foot"><span class="quest-reward">보상: ${grantText(m.reward || {})}</span>${action}</div>
+    </div>`;
 }
 
 function renderQuest() {
@@ -927,46 +1076,36 @@ function renderQuest() {
   }).join("");
   const allDone = S.daily.quests.every((q) => q.claimed);
 
-  let commune;
-  if (mode !== "online") {
-    commune = `<div class="notice">공동 임무는 로그인해야 참여할 수 있다. (체험 모드)</div>`;
-  } else {
-    const c = todayCommune();
-    const prog = communeProgress;
-    const pct = prog === null ? 0 : Math.min(100, Math.round((prog / c.target) * 100));
-    const complete = prog !== null && prog >= c.target;
-    let action = "";
-    if (S.commune.claimed) action = `<span class="quest-sub">보상을 받았다</span>`;
-    else if (complete && S.commune.contrib > 0) action = `<button class="btn btn-small btn-main" id="communeClaim">공동 보상 받기</button>`;
-    else if (complete) action = `<span class="quest-sub">목표 달성 — 오늘 한 번이라도 보탠 사람만 보상을 받는다</span>`;
-    if (!complete && c.kind === "deliver") {
-      const have = S.inv[c.item] || 0;
-      action = `<input id="communeQty" type="number" min="1" max="${have}" value="${Math.max(1, have)}"> <button class="btn btn-small" id="communeDeliver" ${atCamp && have ? "" : "disabled"}>${ITEMS[c.item].name} 납품 (보유 ${have})</button>`;
-    }
-    const howTo = { slay: "해당 적을 처치하면 자동으로 보태진다.", reveal: "새 땅을 밝히면 자동으로 보태진다.", search: "탐색하면 자동으로 보태진다.", deliver: "임시 기지에서 납품하라." }[c.kind];
-    commune = `<div class="commune">
-      <div class="commune-title">${c.title}</div>
-      <div class="quest-sub">${c.desc} ${howTo}</div>
-      <div class="quest-bar"><i style="width:${pct}%"></i></div>
-      <div class="quest-foot"><span>전체 ${prog === null ? "…" : prog} / ${c.target} · 나의 기여 ${S.commune.contrib}</span><span class="quest-reward">달성 보상: ${grantText(COMMUNE_REWARD)}</span></div>
-      <div class="commune-row">${action}<button class="btn btn-small btn-ghost" id="communeRefresh">현황 새로고침</button></div>
-    </div>`;
-  }
+  const weekly = missions.filter((m) => m.scope === "weekly");
+  const commune = missions.filter((m) => m.scope === "commune");
+  const weeklyHtml = weekly.length ? `<div class="quest-grid">${weekly.map(missionCard).join("")}</div>`
+    : `<div class="empty">지금 걸린 주간 의뢰가 없다.</div>`;
+  const communeHtml = commune.length
+    ? `${mode !== "online" ? `<div class="notice">공동 임무는 로그인해야 참여할 수 있다. (체험 모드)</div>` : ""}<div class="mission-list">${commune.map(missionCard).join("")}</div>`
+    : `<div class="empty">지금 걸린 공동 임무가 없다.</div>`;
 
   $("tabPanel").innerHTML = `
     <div class="section-label">오늘의 임무 · ${S.daily.date} · 자정에 바뀐다</div>
     <div class="quest-grid">${cards}</div>
     <div class="empty">${allDone ? "◈ 오늘의 임무를 모두 마쳤다." : `세 임무를 모두 마치면 추가 보상: ${grantText(DAILY_BONUS)}`}</div>
-    <div class="section-label">공동 임무 · 강호의 모두가 함께</div>
-    ${commune}`;
+    <div class="section-label">주간 의뢰 · 맹주의 명</div>
+    ${weeklyHtml}
+    <div class="section-label">공동 임무 · 강호의 모두가 함께 <button class="btn btn-small btn-ghost" id="mRefresh" style="margin-left:8px">현황 새로고침</button></div>
+    ${communeHtml}`;
   $("tabPanel").querySelectorAll("[data-claim]").forEach((b) => b.onclick = () => claimQuest(+b.dataset.claim));
   $("tabPanel").querySelectorAll("[data-deliver]").forEach((b) => b.onclick = () => deliverQuest(+b.dataset.deliver));
   const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  on("communeClaim", claimCommune);
-  on("communeDeliver", deliverCommune);
-  on("communeRefresh", loadCommune);
+  $("tabPanel").querySelectorAll("[data-mclaim]").forEach((b) => b.onclick = () => claimMission(+b.dataset.mclaim));
+  $("tabPanel").querySelectorAll("[data-mdeliver]").forEach((b) => b.onclick = () => deliverMission(+b.dataset.mdeliver));
+  on("mRefresh", loadMissions);
 }
-function grantText(r) { return `공적 ${r.merit}${r.items ? " · " + itemsText(r.items) : ""}`; }
+function grantText(r) {
+  const parts = [];
+  if (r.merit) parts.push(`공적 ${r.merit}`);
+  const items = Object.fromEntries(Object.entries(r.items || {}).filter(([id, n]) => ITEMS[id] && n > 0));
+  if (Object.keys(items).length) parts.push(itemsText(items));
+  return parts.join(" · ") || "없음";
+}
 
 // ============================================================
 //  교환 (참가자끼리 꾸러미 보내기)
@@ -1078,7 +1217,7 @@ function switchTab(tab, scroll) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
   renderTab();
-  if (tab === "quest") loadCommune();
+  if (tab === "quest") loadMissions();
   if (scroll) $("tabPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function renderTab() {
@@ -1087,9 +1226,7 @@ function renderTab() {
 }
 function updateDots() {
   if (!S || !S.daily) return;
-  const c = todayCommune();
-  const claimable = S.daily.quests.some((q) => q.done && !q.claimed) ||
-    (mode === "online" && S.commune && !S.commune.claimed && S.commune.contrib > 0 && (communeProgress || 0) >= c.target);
+  const claimable = S.daily.quests.some((q) => q.done && !q.claimed) || missions.some(canClaimMission);
   $("questDot").classList.toggle("hidden", !claimable);
 }
 
@@ -1535,7 +1672,7 @@ window.addEventListener("beforeunload", () => { if (S && mode === "local") saveN
 setInterval(() => {
   if (!S) return;
   checkDailyReset(); renderHeader(); renderTile();
-  checkGifts(); checkMail();
+  checkGifts(); checkMail(); loadGates(); loadMissions();
 }, 60000);
 
 // ============================================================
@@ -1596,5 +1733,5 @@ setInterval(checkUpdate, 3 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   checkUpdate();
-  checkGifts(); checkMail();
+  checkGifts(); checkMail(); loadGates(); loadMissions();
 });

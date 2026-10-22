@@ -160,3 +160,88 @@ create policy "받기 또는 회수" on public.mail
   for delete to authenticated using (to_id = auth.uid() or public.is_admin());
 
 grant select, insert, delete on public.mail to authenticated;
+
+-- ============================================================
+--  맵 해금: 다리 놓기 / 경공 절벽 (운영진만 열고 닫을 수 있음)
+-- ============================================================
+create table if not exists public.gates (
+  id         text primary key,
+  opened     boolean not null default false,
+  opened_at  timestamptz
+);
+alter table public.gates enable row level security;
+
+drop policy if exists "누구나 해금 상태 보기" on public.gates;
+create policy "누구나 해금 상태 보기" on public.gates
+  for select to anon, authenticated using (true);
+
+drop policy if exists "운영진만 해금 추가" on public.gates;
+create policy "운영진만 해금 추가" on public.gates
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "운영진만 해금 변경" on public.gates;
+create policy "운영진만 해금 변경" on public.gates
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+grant select on public.gates to anon, authenticated;
+grant insert, update on public.gates to authenticated;
+
+-- ============================================================
+--  주간 의뢰(개인) · 공동 임무(전원 합산) — 운영진이 등록
+-- ============================================================
+create table if not exists public.missions (
+  id         bigint generated always as identity primary key,
+  scope      text not null check (scope in ('weekly', 'commune')),
+  title      text not null check (char_length(title) between 1 and 40),
+  descr      text check (descr is null or char_length(descr) <= 200),
+  kind       text not null check (kind in ('hunt', 'slay', 'search', 'reveal', 'deliver', 'cook', 'forge')),
+  param      text,
+  target     integer not null check (target between 1 and 100000),
+  reward     jsonb not null default '{}'::jsonb,
+  starts_at  timestamptz not null default now(),
+  ends_at    timestamptz not null,
+  progress   integer not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.missions enable row level security;
+
+drop policy if exists "누구나 임무 보기" on public.missions;
+create policy "누구나 임무 보기" on public.missions
+  for select to anon, authenticated using (true);
+
+drop policy if exists "운영진만 임무 등록" on public.missions;
+create policy "운영진만 임무 등록" on public.missions
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "운영진만 임무 수정" on public.missions;
+create policy "운영진만 임무 수정" on public.missions
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "운영진만 임무 삭제" on public.missions;
+create policy "운영진만 임무 삭제" on public.missions
+  for delete to authenticated using (public.is_admin());
+
+grant select on public.missions to anon, authenticated;
+grant insert, update, delete on public.missions to authenticated;
+
+-- 공동 임무 진행도는 이 함수로만 조금씩 더할 수 있다
+create or replace function public.mission_add(p_id bigint, p_amount integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v integer;
+begin
+  if auth.uid() is null then raise exception '로그인이 필요합니다'; end if;
+  if p_amount < 1 or p_amount > 5 then raise exception '한 번에 1~5까지만 더할 수 있습니다'; end if;
+  update public.missions set progress = progress + p_amount
+    where id = p_id and scope = 'commune' and now() between starts_at and ends_at
+    returning progress into v;
+  if v is null then raise exception '진행 중인 공동 임무가 아닙니다'; end if;
+  return v;
+end;
+$$;
+
+revoke all on function public.mission_add(bigint, integer) from public, anon;
+grant execute on function public.mission_add(bigint, integer) to authenticated;
