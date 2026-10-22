@@ -1343,9 +1343,14 @@ function renderBag() {
   $("bagCount").textContent = `${entries.length}종`;
   if (bagTab === "gear") {
     const slotName = { weapon: "무기", armor: "호구", charm: "패물" };
+    const slotHanja = { weapon: "武", armor: "甲", charm: "佩" };
     $("bagPanel").innerHTML = `<div class="eq-slots">${Object.entries(S.equip).map(([slot, id]) => `
-      <div class="eq-slot"><span class="k">${slotName[slot]}</span>
-      ${id ? `<b>${ITEMS[id].name}</b><span class="card-eff">${effText(ITEMS[id])}</span><button class="btn btn-small" data-unequip="${slot}">벗기</button>` : `<span class="empty">비어 있음</span>`}</div>`).join("")}</div>
+      <div class="eq-slot ${id ? "" : "is-empty"}">
+        <span class="eq-ic">${slotHanja[slot]}</span>
+        <span class="eq-tx"><span class="k">${slotName[slot]}</span>
+          ${id ? `<b>${ITEMS[id].name}</b><span class="eq-eff">${effText(ITEMS[id])}</span>` : `<b class="none">비어 있음</b><span class="eq-eff">행낭에서 골라 착용</span>`}</span>
+        ${id ? `<button class="btn btn-small" data-unequip="${slot}">벗기</button>` : `<span class="eq-btn-space"></span>`}
+      </div>`).join("")}</div>
       <div class="pf-help" style="margin-top:8px">장비는 행낭에서 골라 「착용」한다. 장비는 공방에서 벼린다.</div>`;
     $("itemDetail").innerHTML = "";
     $("bagPanel").querySelectorAll("[data-unequip]").forEach((b) => b.onclick = () => unequip(b.dataset.unequip));
