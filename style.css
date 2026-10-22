@@ -706,9 +706,9 @@ body.has-update .topbar { top: var(--ub, 46px); }
 .paper {
   position: fixed; inset: 0; z-index: 100; pointer-events: none;
   background: url("hanji.png") repeat; background-size: 540px 360px;
-  mix-blend-mode: multiply; opacity: .7;   /* 결이 너무 진하면 숫자를 낮추세요 (0~1) */
+  mix-blend-mode: multiply; opacity: .45;   /* 결이 너무 진하면 숫자를 낮추세요 (0~1) */
 }
-:root[data-theme="dark"] .paper { filter: invert(1); mix-blend-mode: screen; opacity: .35; }
+:root[data-theme="dark"] .paper { filter: invert(1); mix-blend-mode: screen; opacity: .22; }
 
 /* 패널에 한지 결 */
 .panel, .auth-box, .modal-box, .tab {
