@@ -5,7 +5,7 @@
 
 const CONFIG = {
   // Supabase > Project Settings > API(또는 Data API) 에 있는 Project URL
-  SUPABASE_URL: "rAOO93pl0vv4DAGf",
+  SUPABASE_URL: "https://srrcbicvqydhpwdnikbo.supabase.co/rest/v1/",
 
   // Supabase > Project Settings > API Keys 에 있는
   // "publishable" 키(sb_publishable_...) 또는 "anon public" 키
