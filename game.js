@@ -437,7 +437,7 @@ function renderTile() {
   const buff = S.buff ? `<div class="buff-line">◈ 다음 토벌 효과: ${buffText(S.buff)}</div>` : "";
   $("tilePanel").innerHTML = `
     <div class="tile-head">
-      <div class="tile-seal t-${code}">${t.hanja}</div>
+      <div class="tile-seal t-${code}"><span>${t.hanja}</span></div>
       <div>
         <div class="tile-name">${tName}</div>
         <div class="danger">위험 <b>${dangerStr}</b> · 좌표 ${S.x + 1}-${S.y + 1}</div>
@@ -488,7 +488,7 @@ function renderChoices() {
     const dis = lack || (c.off && c.off !== "막힘");
     const costTxt = typeof c.cost === "number" ? (c.cost ? `행동력 ${c.cost}` : "즉시") : c.cost;
     return `<button class="ch ${c.main ? "main" : ""} ${c.go ? "go" : ""} ${c.danger ? "ch-danger" : ""}" data-ch="${i}" ${dis ? "disabled" : ""} title="${esc(c.off || (lack ? "행동력이 모자라다" : c.sub || ""))}">
-      <span class="ic">${c.ic}</span><span class="tx"><b>${esc(c.label)}</b><small>${esc(c.off && c.off !== "막힘" ? c.off : c.sub || "")}</small></span><span class="cost">${costTxt}</span></button>`;
+      <span class="ic"><span>${c.ic}</span></span><span class="tx"><b>${esc(c.label)}</b><small>${esc(c.off && c.off !== "막힘" ? c.off : c.sub || "")}</small></span><span class="cost">${costTxt}</span></button>`;
   }).join("");
   $("choices").querySelectorAll("[data-ch]").forEach((b) => b.onclick = () => { if (!busy) list[+b.dataset.ch].fn(); });
 }
@@ -1346,7 +1346,7 @@ function renderBag() {
     const slotHanja = { weapon: "武", armor: "甲", charm: "佩" };
     $("bagPanel").innerHTML = `<div class="eq-slots">${Object.entries(S.equip).map(([slot, id]) => `
       <div class="eq-slot ${id ? "" : "is-empty"}">
-        <span class="eq-ic">${slotHanja[slot]}</span>
+        <span class="eq-ic"><span>${slotHanja[slot]}</span></span>
         <span class="eq-tx"><span class="k">${slotName[slot]}</span>
           ${id ? `<b>${ITEMS[id].name}</b><span class="eq-eff">${effText(ITEMS[id])}</span>` : `<b class="none">비어 있음</b><span class="eq-eff">행낭에서 골라 착용</span>`}</span>
         ${id ? `<button class="btn btn-small" data-unequip="${slot}">벗기</button>` : `<span class="eq-btn-space"></span>`}
