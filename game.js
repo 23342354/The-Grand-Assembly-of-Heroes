@@ -86,7 +86,7 @@ function newState(name) {
     recipes: [],
     merit: 0, kills: 0, wardenKills: 0,
     daily: null, commune: null,
-    giftLog: [], sentLog: [],
+    giftLog: [], sentLog: [], mailLog: [],
     profile: { aff: "", intro: "", credit: "" },
     created: Date.now(),
   };
@@ -263,7 +263,8 @@ $("localBtn").addEventListener("click", () => {
 $("logoutBtn").addEventListener("click", async () => {
   await saveNow();
   if (mode === "online") await sb.auth.signOut();
-  S = null; uid = null; myAvatar = null; playerList = null;
+  S = null; uid = null; myAvatar = null; playerList = null; mailList = [];
+  $("mailBadge").classList.add("hidden");
   $("log").innerHTML = "";
   $("gameScreen").classList.add("hidden");
   $("authScreen").classList.remove("hidden");
@@ -289,7 +290,7 @@ function enterGame(isNew) {
   checkDailyReset();
   renderAll();
   save();
-  if (mode === "online") { checkGifts(); loadCommune(); }
+  if (mode === "online") { checkGifts(); loadCommune(); checkMail(); }
 }
 
 // ============================================================
@@ -376,7 +377,7 @@ $("map").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (!S || busy || $("gameScreen").classList.contains("hidden") || !$("profileModal").classList.contains("hidden")) return;
+  if (!S || busy || $("gameScreen").classList.contains("hidden") || !$("profileModal").classList.contains("hidden") || !$("mailModal").classList.contains("hidden")) return;
   if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
   const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }[e.key];
   if (!d) return;
@@ -1220,6 +1221,89 @@ async function renderRank() {
 }
 
 
+
+// ============================================================
+//  우편함 (운영진이 admin.html에서 보낸 물품)
+// ============================================================
+let mailList = [];
+let checkingMail = false;
+
+async function checkMail() {
+  if (mode !== "online" || !S || checkingMail) return;
+  checkingMail = true;
+  try {
+    const { data, error } = await sb.from("mail").select("id, from_name, title, body, items, created_at")
+      .eq("to_id", uid).order("created_at", { ascending: false });
+    if (error) return;
+    const before = mailList.length;
+    mailList = data || [];
+    const n = mailList.length;
+    $("mailBadge").textContent = n > 99 ? "99+" : n;
+    $("mailBadge").classList.toggle("hidden", n === 0);
+    if (n > before && before >= 0 && n) toast(`우편 ${n}통이 기다리고 있다.`);
+    if (!$("mailModal").classList.contains("hidden")) renderMail();
+  } finally {
+    checkingMail = false;
+  }
+}
+
+function openMail() {
+  $("mailModal").classList.remove("hidden");
+  renderMail();
+  checkMail();
+}
+function closeMail() { $("mailModal").classList.add("hidden"); }
+$("mailBtn").onclick = openMail;
+$("mailClose").onclick = closeMail;
+$("mailModal").addEventListener("click", (e) => { if (e.target.id === "mailModal") closeMail(); });
+
+function mailItemsText(items) {
+  const known = Object.entries(items || {}).filter(([id, n]) => ITEMS[id] && n > 0);
+  return known.length ? itemsText(Object.fromEntries(known)) : "";
+}
+
+function renderMail() {
+  if (mode !== "online") {
+    $("mailBody").innerHTML = `<div class="notice" style="margin-top:14px">우편함은 로그인해야 쓸 수 있다. (체험 모드)</div>`;
+    return;
+  }
+  const card = (m, old) => `<div class="mail ${old ? "old" : ""}">
+      <div class="mail-top"><span class="mail-title">${esc(m.title)}</span><span class="mail-meta">${esc(m.from_name || "운영진")} · ${fmtTime(m.created_at || m.at)}</span></div>
+      ${m.body ? `<div class="mail-body">${esc(m.body)}</div>` : ""}
+      ${mailItemsText(m.items) ? `<div class="mail-items">동봉: ${mailItemsText(m.items)}</div>` : ""}
+      ${old ? "" : `<div class="mail-foot"><button class="btn btn-small btn-main" data-mail="${m.id}">받기</button></div>`}
+    </div>`;
+  const waiting = mailList.length
+    ? `<div class="pf-inline" style="justify-content:space-between;margin-top:14px"><span class="pf-help">받지 않은 우편 ${mailList.length}통</span>${mailList.length > 1 ? `<button class="btn btn-small" id="mailAll">모두 받기</button>` : ""}</div>
+       <div class="mail-list">${mailList.map((m) => card(m, false)).join("")}</div>`
+    : `<div class="empty" style="margin-top:14px">새 우편이 없다.</div>`;
+  const history = (S.mailLog || []).length
+    ? `<div class="section-label">지난 우편</div><div class="mail-list">${S.mailLog.map((m) => card(m, true)).join("")}</div>`
+    : "";
+  $("mailBody").innerHTML = waiting + history;
+  $("mailBody").querySelectorAll("[data-mail]").forEach((b) => b.onclick = () => claimMail([+b.dataset.mail]));
+  const all = $("mailAll"); if (all) all.onclick = () => claimMail(mailList.map((m) => m.id));
+}
+
+async function claimMail(ids) {
+  if (!ids.length) return;
+  // 지우면서 가져온다 → 같은 우편을 두 번 받을 수 없다
+  const { data, error } = await sb.from("mail").delete().in("id", ids).eq("to_id", uid).select();
+  if (error) { toast("우편을 받지 못했다: " + error.message); return; }
+  for (const m of data || []) {
+    for (const [id, n] of Object.entries(m.items || {})) if (ITEMS[id] && n > 0) addItem(id, Math.floor(n));
+    S.mailLog = S.mailLog || [];
+    S.mailLog.unshift({ title: m.title, body: m.body, from_name: m.from_name, items: m.items, at: m.created_at });
+    const it = mailItemsText(m.items);
+    log(`◈ 우편을 열었다 — 「${esc(m.title)}」${it ? " · " + it : ""}`, "quest");
+  }
+  S.mailLog = (S.mailLog || []).slice(0, 20);
+  await saveNow();
+  await checkMail();
+  renderAll(); renderMail();
+  if (data && data.length) toast(`우편 ${data.length}통을 받았다.`);
+}
+
 // ============================================================
 //  두상 / 내 정보(프로필)
 // ============================================================
@@ -1446,7 +1530,7 @@ window.addEventListener("beforeunload", () => { if (S && mode === "local") saveN
 setInterval(() => {
   if (!S) return;
   checkDailyReset(); renderHeader(); renderTile();
-  checkGifts();
+  checkGifts(); checkMail();
 }, 60000);
 
 // ============================================================
@@ -1507,5 +1591,5 @@ setInterval(checkUpdate, 3 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   checkUpdate();
-  checkGifts();
+  checkGifts(); checkMail();
 });

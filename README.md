@@ -18,6 +18,8 @@
 | `data.js` | **맵, 재료, 몬스터, 요리/제작법, 이벤트 문구** | 커뮤 설정에 맞게 자유롭게 |
 | `config.js` | Supabase 연결 주소와 키 | 4단계에서 딱 한 번 |
 | `schema.sql` | Supabase 데이터베이스 설정 | 3단계에서 복사해서 실행만 |
+| `admin.html`, `admin.js` | 운영 페이지 (우편으로 물품 지급) | 묶음 구성만 `admin.js`에서 |
+| `hanji.png` | 한지 결 그림 | 바꾸고 싶을 때만 |
 
 ---
 
@@ -84,6 +86,39 @@
 2. 게임 화면이 뜨면 성공. Supabase의 **Table Editor → players** 에 내 캐릭터가 한 줄 생겨 있습니다.
 3. **교환 시험**: 다른 브라우저(또는 시크릿 창)에서 다른 아이디로 가입 → 한쪽에서 **교환** 탭으로 상대에게 약초 하나를 보내기
    - 1분 안에 상대 화면에 "꾸러미가 도착했다"가 뜨면 성공입니다.
+
+---
+
+## 운영 페이지 (admin.html) — 러너에게 물품 지급
+
+게임 주소 뒤에 `/admin.html`을 붙이면 운영 페이지가 열립니다. (예: `https://withwindcloud.site/admin.html`)
+GitHub Pages는 PHP를 실행할 수 없어서 `admin.php`가 아닌 `admin.html`로 만들었습니다.
+권한은 Supabase가 확인하므로, 주소를 아는 사람이 들어와도 **운영진으로 등록된 계정이 아니면 아무것도 보낼 수 없습니다.**
+
+### 관리자 등록 (처음 한 번)
+1. 운영진도 게임에서 평소처럼 **입적(가입)** 합니다.
+2. Supabase → **SQL Editor**에서 아래를 실행합니다. `운영진아이디`를 실제 아이디로 바꾸세요.
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = '운영진아이디@heukseon.game'
+   on conflict do nothing;
+   ```
+   - `config.js`의 `ID_EMAIL_DOMAIN`을 바꿨다면 `@heukseon.game` 부분도 그 값으로 바꿉니다.
+   - 운영진이 여러 명이면 아이디마다 한 번씩 실행합니다.
+3. 운영진에서 빼려면:
+   ```sql
+   delete from public.admins where user_id = (select id from auth.users where email = '운영진아이디@heukseon.game');
+   ```
+
+### 쓰는 법
+1. `admin.html`에서 운영진 아이디로 들어갑니다.
+2. **받는 이**를 고릅니다. 이름이나 소속으로 찾을 수 있고, **모두 고르기**로 전원에게 보낼 수 있습니다.
+3. **보낼 물품**을 정합니다. `기혈 회복`, `행동력 회복`, `회복 꾸러미`, `희귀 재료` 버튼으로 묶음을 한 번에 채울 수 있고, 줄을 더해 아무 물품이나 넣을 수 있습니다.
+4. 제목과 내용을 적고 **우편 보내기**.
+5. 러너는 게임 상단의 **우편 아이콘(✉)** 에 붉은 숫자가 뜨고, 눌러서 **받기**를 하면 행낭에 들어갑니다. 접속 중이면 1분 안에 숫자가 뜹니다.
+6. 아래 **아직 받지 않은 우편** 목록에서 잘못 보낸 우편을 **회수**할 수 있습니다.
+
+묶음 버튼의 구성은 `admin.js` 맨 위 `PRESETS`에서 바꿀 수 있습니다.
 
 ---
 

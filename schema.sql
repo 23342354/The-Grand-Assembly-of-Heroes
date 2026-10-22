@@ -112,3 +112,51 @@ $$;
 
 revoke all on function public.commune_add(date, integer) from public, anon;
 grant execute on function public.commune_add(date, integer) to authenticated;
+
+-- ============================================================
+--  운영진(관리자)과 우편함
+--  관리자 등록은 가이드의 "관리자 등록" SQL을 따로 실행하세요.
+-- ============================================================
+create table if not exists public.admins (
+  user_id  uuid primary key references auth.users(id) on delete cascade
+);
+alter table public.admins enable row level security;   -- 정책 없음: 웹에서는 읽기·쓰기 불가
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$ select exists (select 1 from public.admins where user_id = auth.uid()); $$;
+
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+create table if not exists public.mail (
+  id          bigint generated always as identity primary key,
+  to_id       uuid not null references public.players(id) on delete cascade,
+  from_name   text not null default '풍운집결 운영진',
+  title       text not null check (char_length(title) between 1 and 40),
+  body        text check (body is null or char_length(body) <= 300),
+  items       jsonb not null default '{}'::jsonb,
+  sent_by     uuid default auth.uid(),
+  created_at  timestamptz not null default now()
+);
+create index if not exists mail_to_idx on public.mail (to_id);
+
+alter table public.mail enable row level security;
+
+drop policy if exists "운영진만 보내기" on public.mail;
+create policy "운영진만 보내기" on public.mail
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "내 우편과 운영진" on public.mail;
+create policy "내 우편과 운영진" on public.mail
+  for select to authenticated using (to_id = auth.uid() or public.is_admin());
+
+drop policy if exists "받기 또는 회수" on public.mail;
+create policy "받기 또는 회수" on public.mail
+  for delete to authenticated using (to_id = auth.uid() or public.is_admin());
+
+grant select, insert, delete on public.mail to authenticated;

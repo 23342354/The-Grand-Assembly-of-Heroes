@@ -102,6 +102,10 @@
       </div>
 
       <div class="top-actions">
+        <button class="icon-btn" id="mailBtn" title="우편함">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6l8.5 7 8.5-7"/></svg>
+          <span class="badge hidden" id="mailBadge">0</span>
+        </button>
         <button class="icon-btn" id="profileBtn2" title="내 정보">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
         </button>
@@ -182,6 +186,17 @@
     </div>
   </div>
   <input type="file" id="pfFile" accept="image/*" class="hidden">
+
+  <!-- ===================== 우편함 창 ===================== -->
+  <div id="mailModal" class="modal hidden">
+    <div class="modal-box mail-box">
+      <div class="pf-head">
+        <div><h2 class="pf-title">우편함 <small class="pf-sub">郵便</small></h2><div class="pf-sub">운영진이 보낸 물품을 여기서 받는다.</div></div>
+        <button class="btn btn-small" id="mailClose">닫기</button>
+      </div>
+      <div id="mailBody"></div>
+    </div>
+  </div>
 
   <div id="toast" class="toast"></div>
 

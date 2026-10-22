@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>운영 · 풍운집결</title>
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("heukseon_theme"); } catch (e) {}
+      if (t !== "light" && t !== "dark") t = (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Song+Myung&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .adm-top { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--topbar-bg); position: sticky; top: 0; z-index: 20; }
+    .adm-top h1 { margin: 0; font-size: 18px; font-weight: 700; flex: 1; }
+    .adm-top h1 small { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 8px; }
+    .adm-wrap { max-width: 1200px; margin: 20px auto 40px; padding: 0 20px; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 16px; }
+    .adm-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+    .adm-login { max-width: 380px; margin: 60px auto; display: flex; flex-direction: column; gap: 10px; }
+    .adm-login label { font-size: 13px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
+    .who-list { max-height: 460px; overflow-y: auto; border: 1px solid var(--line-soft); }
+    .who-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+    .who-row:hover { background: var(--card-bg); }
+    .who-row input { width: 16px; height: 16px; accent-color: var(--btn-main-1); }
+    .who-row .nm { font-weight: 500; }
+    .who-row .sub { color: var(--faint); font-size: 12px; margin-left: auto; white-space: nowrap; }
+    .item-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 36px; gap: 6px; margin-bottom: 6px; }
+    .item-row select, .item-row input { width: 100%; font-size: 14px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); margin-top: 10px; }
+    .field input, .field textarea { width: 100%; font-size: 14px; }
+    .summary { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--line); font-size: 14px; color: var(--text-story); }
+    .sent-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .sent-table th { text-align: left; color: var(--dim); font-weight: 400; border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+    .sent-table td { border-bottom: 1px solid var(--line-soft); padding: 7px 8px; vertical-align: top; }
+    .bar-line { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .bar-line input { flex: 1; min-width: 0; font-size: 14px; }
+    @media (max-width: 860px) { .adm-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="decor" aria-hidden="true">
+    <div class="d-tear d-l1"></div><div class="d-tear d-l2"></div>
+    <div class="d-tear d-r1"></div><div class="d-tear d-r2"></div>
+  </div>
+  <div class="paper" aria-hidden="true"></div>
+
+  <header class="adm-top">
+    <span class="brand-seal"><span>風雲</span><span>集結</span></span>
+    <h1>운영 <small>우편으로 물품 지급</small></h1>
+    <button class="icon-btn theme-btn" data-theme-toggle title="밝은/어두운 화면 전환"></button>
+    <button class="btn btn-small btn-ghost hidden" id="admLogout">나가기</button>
+  </header>
+
+  <!-- 로그인 -->
+  <section id="admLogin" class="panel adm-login hidden">
+    <h3 class="panel-title">운영진 입문</h3>
+    <label>아이디<input id="aId" autocomplete="username"></label>
+    <label>비밀번호<input id="aPw" type="password" autocomplete="current-password"></label>
+    <button class="btn btn-main" id="aGo">들어가기</button>
+    <p class="auth-msg" id="aMsg"></p>
+  </section>
+
+  <!-- 권한 없음 -->
+  <section id="admDenied" class="panel adm-login hidden">
+    <h3 class="panel-title">운영진 권한이 없습니다</h3>
+    <p class="pf-help">이 계정은 아직 운영진으로 등록되지 않았습니다. 설치 가이드의 <b>「관리자 등록」</b> SQL을 Supabase에서 실행한 뒤 새로고침하세요.</p>
+    <p class="pf-help" id="admMyId"></p>
+  </section>
+
+  <main id="admMain" class="adm-wrap hidden">
+    <div class="adm-grid">
+      <section class="panel">
+        <h3 class="panel-title">받는 이 <small id="selCount">0명 선택</small></h3>
+        <div class="bar-line">
+          <input id="whoSearch" placeholder="이름·소속으로 찾기">
+          <button class="btn btn-small" id="selAll">모두 고르기</button>
+          <button class="btn btn-small btn-ghost" id="selNone">비우기</button>
+        </div>
+        <div class="who-list" id="whoList"><div class="empty" style="padding:10px">명부를 펼치는 중…</div></div>
+      </section>
+
+      <section class="panel">
+        <h3 class="panel-title">보낼 물품</h3>
+        <div class="presets" id="presets"></div>
+        <div id="itemRows"></div>
+        <button class="btn btn-small btn-ghost" id="addRow">＋ 물품 줄 더하기</button>
+        <label class="field">우편 제목 (40자)<input id="mTitle" maxlength="40" placeholder="예: 원정 보급품이 도착했습니다"></label>
+        <label class="field">내용 (선택 · 300자)<textarea id="mBody" rows="3" maxlength="300" placeholder="예: 어젯밤 이벤트에 참여해 주셔서 감사합니다."></textarea></label>
+        <div class="summary" id="summary"></div>
+        <div class="pf-foot" style="margin-top:12px"><button class="btn btn-main" id="sendBtn">우편 보내기</button></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h3 class="panel-title">아직 받지 않은 우편 <small>받는 이가 「받기」를 누르면 여기서 사라집니다</small></h3>
+      <div id="sentBox"><div class="empty">불러오는 중…</div></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

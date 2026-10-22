@@ -238,7 +238,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .bar-fill { height: 100%; transition: width .3s; }
 .bar-fill.hp { background: linear-gradient(90deg, var(--hp-dark), var(--hp)); }
 .bar-fill.ap { background: linear-gradient(90deg, var(--ap-dark), var(--ap)); }
-.top-actions { display: flex; gap: 8px; align-items: center; }
+.top-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 
 /* ---------- 본문 배치 ----------
    넓은 화면(1500px 이상): 지도 | 전도+지형 | 행적  — 1920×1080에서 스크롤 없이 한눈에
@@ -561,6 +561,26 @@ body.has-update .topbar { top: var(--ub, 46px); }
   background: var(--panel-2); border: 1px solid var(--line); color: var(--text); cursor: pointer; font-size: 16px;
 }
 .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ---------- 우편함 ---------- */
+.icon-btn { position: relative; }
+.badge {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--seal); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.mail-box { max-width: 560px; border-color: var(--line); }
+.mail-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.mail {
+  border: 1px solid var(--line-soft); background: var(--card-bg); padding: 12px 14px;
+  border-left: 3px solid var(--btn-main-1); display: flex; flex-direction: column; gap: 6px;
+}
+.mail-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mail-title { font-weight: 700; }
+.mail-meta { color: var(--faint); font-size: 12px; white-space: nowrap; }
+.mail-body { color: var(--text-story); font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+.mail-items { color: var(--jade); font-size: 13px; }
+.mail-foot { display: flex; justify-content: flex-end; }
+.mail.old { border-left-color: var(--line); opacity: .7; }
 
 /* ---------- 내 정보(프로필) 창 ---------- */
 .profile-box { max-width: 560px; border-color: var(--line); }
