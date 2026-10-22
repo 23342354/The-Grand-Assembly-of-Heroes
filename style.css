@@ -256,7 +256,7 @@ input:focus, select:focus { border-color: var(--gold); }
 
 /* ============================================================
    화면 배치
-   넓은 화면: [지도+지금 있는 곳] [행낭·공방·임무·교환·전공록] [전도+행적]
+   넓은 화면: [전도+지금 있는 곳] [큰 지도] [행낭·공방·임무·교환·전공록+행적]
    → 한 화면에 모두 들어오고, 페이지는 스크롤되지 않는다 (넘치는 칸만 안에서 스크롤)
    좁은 화면·휴대폰: 위에서 아래로 쌓인다
    ============================================================ */
@@ -266,26 +266,33 @@ input:focus, select:focus { border-color: var(--gold); }
 .center-col { gap: 0; }
 .minimap-panel { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; }
 
+/* 휴대폰·좁은 화면에서는 지도 → 지금 있는 곳 → 탭 → 전도 → 행적 순서 */
+.layout .map-col { order: 1; } .layout .side-col { order: 2; } .layout .center-col { order: 3; }
+
 @media (min-width: 1100px) {
-  /* 지도 크기: 화면 높이에 맞춰 자동 (지형 정보 칸 자리 270px 남김) */
-  :root { --mapsize: max(230px, min(440px, calc(100vh - 380px))); --side-w: clamp(260px, 21vw, 340px); }
+  /* 지도가 중심: 화면 높이에 맞춰 최대한 크게 */
+  :root {
+    --side-w: clamp(250px, 17vw, 310px);
+    --mapsize: max(300px, min(calc(100vh - 128px), calc(100vw - var(--side-w) - 520px)));
+  }
   body:has(#gameScreen:not(.hidden)) { overflow: hidden; }
   #gameScreen:not(.hidden) { height: 100vh; display: flex; flex-direction: column; }
   body.has-update #gameScreen:not(.hidden) { height: calc(100vh - var(--ub, 46px)); }
   .layout {
-    flex: 1; min-height: 0; max-width: 1760px; width: 100%;
-    display: grid; grid-template-columns: calc(var(--mapsize) + 22px) minmax(0, 1fr) var(--side-w);
-    gap: 12px; padding: 12px 16px; align-items: stretch;
+    flex: 1; min-height: 0; max-width: none; width: 100%;
+    display: grid; grid-template-columns: var(--side-w) calc(var(--mapsize) + 22px) minmax(420px, 1fr);
+    gap: 14px; padding: 12px 16px; align-items: stretch;
   }
-  .map-col #tilePanel { flex: 1; min-height: 0; overflow-y: auto; }
+  .layout .side-col { order: 0; } .layout .map-col { order: 1; justify-content: center; } .layout .center-col { order: 2; }
+  .side-col #tilePanel { flex: 1; min-height: 0; overflow-y: auto; }
   .center-col .tab-panel { flex: 1; min-height: 0; overflow-y: auto; }
-  .side-col .log-panel { flex: 1; min-height: 0; }
-  .side-col .log { max-height: none; min-height: 0; }
-  .layout .map-frame { margin: 0; outline: none; flex-shrink: 0; }
-  body:has(.topbar .chips) .layout { padding-top: 10px; }
+  .center-col .log-panel { flex: 0 0 auto; height: clamp(150px, 24vh, 240px); min-height: 0; margin-top: 10px; }
+  .center-col .log { max-height: none; min-height: 0; }
+  .layout .map-frame { margin: 0; outline: none; flex-shrink: 0; box-shadow: 0 10px 30px var(--shadow); }
+  .map { gap: 4px; }
 }
 @media (min-width: 1100px) and (max-width: 1440px) {
-  :root { --mapsize: max(220px, min(400px, calc(100vh - 430px))); }
+  :root { --mapsize: max(280px, min(calc(100vh - 186px), calc(100vw - var(--side-w) - 480px))); }
 }
 
 .panel {
@@ -311,7 +318,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .tile {
   aspect-ratio: 1; position: relative;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-title); font-size: calc(var(--mapsize) / 13);
+  font-family: var(--font-title); font-size: calc(var(--mapsize) / 15);
   border: 1px solid rgba(128,128,128,.08);
   user-select: none; transition: filter .15s, transform .1s;
 }

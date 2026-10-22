@@ -117,16 +117,25 @@
     </header>
 
     <main class="layout">
-      <!-- 왼쪽: 지도 + 지금 있는 곳 -->
+      <!-- 왼쪽: 전도 + 지금 있는 곳 -->
+      <section class="side-col">
+        <div class="panel minimap-panel">
+          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
+          <div id="minimap" class="minimap"></div>
+          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>시야</span><span><i class="lg lg-camp"></i>기지</span><span><i class="lg lg-tower"></i>탑</span></div>
+        </div>
+        <div class="panel" id="tilePanel"></div>
+      </section>
+
+      <!-- 가운데: 지도 -->
       <section class="map-col">
         <div class="map-frame">
           <div id="map" class="map"></div>
           <p class="map-hint">인접한 칸 클릭 · 방향키(WASD) · 이동마다 행동력 1</p>
         </div>
-        <div class="panel" id="tilePanel"></div>
       </section>
 
-      <!-- 가운데: 행낭 · 공방 · 임무 · 교환 · 전공록 -->
+      <!-- 오른쪽: 행낭 · 공방 · 임무 · 교환 · 전공록 + 행적 -->
       <section class="center-col">
         <nav class="tabs">
           <button class="tab active" data-tab="bag">행낭 <small>行囊</small></button>
@@ -136,15 +145,6 @@
           <button class="tab" data-tab="rank">전공록 <small>戰功錄</small></button>
         </nav>
         <section class="panel tab-panel" id="tabPanel"></section>
-      </section>
-
-      <!-- 오른쪽: 전도 + 행적 -->
-      <section class="side-col">
-        <div class="panel minimap-panel">
-          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
-          <div id="minimap" class="minimap"></div>
-          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>시야</span><span><i class="lg lg-camp"></i>기지</span><span><i class="lg lg-tower"></i>탑</span></div>
-        </div>
         <div class="panel log-panel">
           <h3 class="panel-title">행적 <small>行跡</small></h3>
           <div id="log" class="log"></div>

@@ -21,7 +21,7 @@ const RULES = {
 // Q = 다리를 놓을 자리, Z = 경공으로 오를 자리 → 운영진이 admin.html에서 열어야 지나갈 수 있습니다.
 // 화면에는 내 주변 5 x 5 칸만 보이고, 걸어가면 지도가 따라 움직입니다.
 const MAP_VERSION = 3;   // 지도를 크게 바꾸면 이 숫자를 1 올리세요 (모두 기지에서 다시 시작)
-const VIEW = 5;          // 화면에 보이는 칸 수 (홀수: 5, 7, 9 …)
+const VIEW = 7;          // 화면에 보이는 칸 수 (홀수: 5, 7, 9 …)
 const MAP = [
   "RBWVWWPBBKOOOPOOOOPPO",
   "BTBWVVOOPKKPPOOOOOOXO",
