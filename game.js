@@ -56,7 +56,10 @@ let S = null;            // 내 캐릭터 상태 (저장 대상)
 let sb = null;           // Supabase 클라이언트
 let uid = null;          // 로그인한 유저 id
 let mode = "local";      // "online" | "local"
-let currentTab = "bag";
+let currentTab = "quest";
+let bagTab = "bag";
+let selItem = null;
+let mapView = "near";
 let busy = false;        // 전투 연출 중 입력 막기
 let mapWasReset = false;
 let myAvatar = null;     // 내 두상 그림 (100x100, data URL)
@@ -272,7 +275,7 @@ $("localBtn").addEventListener("click", () => {
 $("logoutBtn").addEventListener("click", async () => {
   await saveNow();
   if (mode === "online") await sb.auth.signOut();
-  S = null; uid = null; myAvatar = null; playerList = null; mailList = [];
+  S = null; uid = null; myAvatar = null; playerList = null; mailList = []; others = null;
   $("mailBadge").classList.add("hidden");
   $("log").innerHTML = "";
   $("gameScreen").classList.add("hidden");
@@ -301,13 +304,13 @@ function enterGame(isNew) {
   renderAll();
   save();
   loadGates(); loadMissions();
-  if (mode === "online") { checkGifts(); checkMail(); }
+  if (mode === "online") { checkGifts(); checkMail(); loadNearby(); }
 }
 
 // ============================================================
 //  화면 그리기
 // ============================================================
-function renderAll() { renderHeader(); renderMap(); renderTile(); renderTab(); updateDots(); }
+function renderAll() { renderHeader(); renderMap(); renderTile(); renderBag(); renderTab(); renderNearby(); updateDots(); }
 
 function renderHeader() {
   const st = stats();
@@ -326,6 +329,31 @@ function renderHeader() {
   $("hdrSpd").textContent = st.spd + plus("spd");
   $("hdrMerit").textContent = S.merit;
   $("hdrKills").textContent = S.kills;
+  $("hdrExpBar").style.width = Math.min(100, (S.exp / expToNext(S.lv)) * 100) + "%";
+  $("hdrLv").textContent = `경지 ${S.lv}성`;
+  $("hdrName2").textContent = S.name;
+  const t = tileAt(S.x, S.y), g = gateAt(S.x, S.y);
+  $("hdrLoc").textContent = g ? g.name : t.name;
+  const tags = [];
+  tags.push(t.danger ? `<span class="tagc red">위험 ${"◆".repeat(t.danger)}</span>` : `<span class="tagc blue">안전</span>`);
+  if (t.camp) tags.push(`<span class="tagc">공방·취사장</span>`);
+  else if (t.rest) tags.push(`<span class="tagc">쉼터</span>`);
+  tags.push(`<span class="tagc">${S.x + 1}-${S.y + 1}</span>`);
+  $("hdrLocTags").innerHTML = tags.join("");
+  $("hdrSky").textContent = skyText();
+  $("hdrHere").textContent = `● ${t.name}에 있음`;
+}
+
+// 한국 시간에 맞춘 하늘 문구
+function skyText() {
+  const h = new Date(Date.now() + 9 * 3600e3).getUTCHours();
+  const left = `행동력 ${S.ap}/${RULES.dailyAP}`;
+  if (h < 5) return `깊은 밤 · 흑수 위로 달빛이 흔들린다 · ${left}`;
+  if (h < 8) return `새벽 · 안개가 낮게 깔렸다 · ${left}`;
+  if (h < 12) return `아침 · 풍운이 걷히고 길이 보인다 · ${left}`;
+  if (h < 17) return `낮 · 하늘이 맑다 · ${left}`;
+  if (h < 20) return `저녁 · 노을이 탑을 붉게 물들인다 · ${left}`;
+  return `밤 · 화톳불 곁이 그리운 시각 · ${left}`;
 }
 
 function isNear(x, y) { return Math.abs(x - S.x) + Math.abs(y - S.y) === 1; }
@@ -341,6 +369,7 @@ function renderMap() {
   const { x0, y0 } = viewOrigin();
   const vw = Math.min(VIEW, MAP_W), vh = Math.min(VIEW, MAP_H);
   $("map").style.gridTemplateColumns = `repeat(${vw}, 1fr)`;
+  $("map").style.gridTemplateRows = `repeat(${vh}, 1fr)`;
   let html = "";
   for (let y = y0; y < y0 + vh; y++) {
     for (let x = x0; x < x0 + vw; x++) {
@@ -405,12 +434,6 @@ function renderTile() {
   const tName = g ? `${t.name} · ${g.name}` : t.name;
   const tDesc = g ? (openGates.has(g.id) ? g.open : g.locked) : t.desc;
   const dangerStr = t.danger ? "◆".repeat(t.danger) + "◇".repeat(5 - t.danger) : "안전";
-  let actions = "";
-  if (t.rest) actions += `<button class="btn" id="actRest">휴식 <small>기혈 회복</small></button>`;
-  if (t.camp) actions += `<button class="btn" id="actCraft">공방 열기</button>`;
-  if (t.drops.length) actions += `<button class="btn" id="actExplore" ${S.ap < RULES.exploreCost ? "disabled" : ""}>탐색 <small>행동력 ${RULES.exploreCost}</small></button>`;
-  if (t.monsters.length) actions += `<button class="btn btn-main" id="actHunt" ${S.ap < RULES.huntCost ? "disabled" : ""}>${MONSTERS[t.monsters[0]].boss ? "수문장에게 도전" : "토벌"} <small>행동력 ${RULES.huntCost}</small></button>`;
-  if (!t.camp) actions += `<button class="btn btn-ghost" id="actHome" title="행동력 없이 임시 기지로 곧장 돌아간다">기지로 귀환 <small>행동력 0</small></button>`;
   const buff = S.buff ? `<div class="buff-line">◈ 다음 토벌 효과: ${buffText(S.buff)}</div>` : "";
   $("tilePanel").innerHTML = `
     <div class="tile-head">
@@ -420,14 +443,54 @@ function renderTile() {
         <div class="danger">위험 <b>${dangerStr}</b> · 좌표 ${S.x + 1}-${S.y + 1}</div>
       </div>
     </div>
-    <div class="tile-desc">${tDesc}</div>
-    <div class="actions">${actions}</div>${buff}`;
-  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  on("actRest", rest);
-  on("actCraft", () => switchTab("craft", true));
-  on("actExplore", explore);
-  on("actHunt", () => hunt(false));
-  on("actHome", returnToCamp);
+    <div class="tile-desc">${tDesc}</div>${buff}`;
+  renderChoices();
+}
+
+// ---------- 선택지: 여기서 할 수 있는 일과 갈 수 있는 곳 ----------
+function renderChoices() {
+  const t = tileAt(S.x, S.y);
+  const list = [];
+  const add = (o) => list.push(o);
+  if (t.monsters.length) {
+    const boss = MONSTERS[t.monsters[0]].boss;
+    add({ id: "hunt", ic: boss ? "鬪" : "討", main: true, danger: true, label: boss ? "흑선탑 수문장에게 도전한다" : `${t.name}의 적을 토벌한다`, sub: boss ? "혼자 이기기는 어렵다" : t.monsters.map((m) => MONSTERS[m].name).filter((v, i, a) => a.indexOf(v) === i).join(" · "), cost: RULES.huntCost, fn: () => hunt(false) });
+  }
+  if (t.drops.length) add({ id: "explore", ic: "探", label: `${t.name}을(를) 샅샅이 뒤진다`, sub: "재료 · 낮은 확률로 사건", cost: RULES.exploreCost, fn: explore });
+  if (t.rest) add({ id: "rest", ic: "息", label: t.camp ? "화톳불 곁에서 쉰다" : "바람막이 아래에서 쉰다", sub: "기혈을 모두 회복", cost: 0, fn: rest, off: S.hp >= stats().maxHp ? "기혈이 가득하다" : null });
+  if (t.camp) {
+    add({ id: "kitchen", ic: "炊", label: "취사장에서 밥을 짓는다", sub: "요리 만들기", cost: 0, fn: () => switchTab("craft") });
+    add({ id: "forge", ic: "鍛", label: "공방에서 칼을 벼린다", sub: "장비 만들기", cost: 0, fn: () => switchTab("craft") });
+    add({ id: "board", ic: "榜", label: "게시판을 본다", sub: "일일 임무 · 주간 의뢰 · 공동 임무", cost: 0, fn: () => switchTab("quest") });
+  }
+  if (mailList.length) add({ id: "mail", ic: "郵", label: "우편을 연다", sub: `받지 않은 우편 ${mailList.length}통`, cost: 0, fn: openMail });
+  // 이동
+  const dirs = [["북", 0, -1, "↑"], ["남", 0, 1, "↓"], ["서", -1, 0, "←"], ["동", 1, 0, "→"]];
+  const revealed = new Set(S.revealed);
+  for (const [nm, dx, dy, arrow] of dirs) {
+    const x = S.x + dx, y = S.y + dy;
+    const nt = tileAt(x, y);
+    if (!nt) continue;
+    const seen = revealed.has(key(x, y));
+    const gg = gateAt(x, y);
+    if (!passable(x, y)) {
+      if (!seen) continue;
+      add({ id: "go" + nm, ic: arrow, go: true, label: `${nm}쪽 · ${gg ? gg.name : nt.name}`, sub: gg ? `${gg.stage}단계 관문 — 아직 열리지 않았다` : "지나갈 수 없다", cost: "막힘", off: "막힘", fn: () => bumpInto(x, y) });
+      continue;
+    }
+    add({ id: "go" + nm, ic: arrow, go: true, label: seen ? `${nm}쪽 ${gg ? gg.name : nt.name}(으)로 간다` : `${nm}쪽 안개 속으로 나아간다`, sub: seen ? (nt.danger ? `위험 ${"◆".repeat(nt.danger)}` : "안전") : "가 본 적 없는 곳", cost: RULES.moveCost, fn: () => move(x, y) });
+  }
+  if (!t.camp) add({ id: "home", ic: "營", label: "임시 기지로 돌아간다", sub: "아는 길 · 곧장 귀환", cost: 0, fn: returnToCamp });
+
+  $("choiceCount").textContent = `${list.length}개`;
+  $("choices").innerHTML = list.map((c, i) => {
+    const lack = typeof c.cost === "number" && c.cost > S.ap;
+    const dis = lack || (c.off && c.off !== "막힘");
+    const costTxt = typeof c.cost === "number" ? (c.cost ? `행동력 ${c.cost}` : "즉시") : c.cost;
+    return `<button class="ch ${c.main ? "main" : ""} ${c.go ? "go" : ""} ${c.danger ? "ch-danger" : ""}" data-ch="${i}" ${dis ? "disabled" : ""} title="${esc(c.off || (lack ? "행동력이 모자라다" : c.sub || ""))}">
+      <span class="ic">${c.ic}</span><span class="tx"><b>${esc(c.label)}</b><small>${esc(c.off && c.off !== "막힘" ? c.off : c.sub || "")}</small></span><span class="cost">${costTxt}</span></button>`;
+  }).join("");
+  $("choices").querySelectorAll("[data-ch]").forEach((b) => b.onclick = () => { if (!busy) list[+b.dataset.ch].fn(); });
 }
 
 function buffText(b) {
@@ -1213,16 +1276,17 @@ function renderTrade() {
 //  하단 탭: 행낭 / 공방 / 임무 / 교환 / 전공록
 // ============================================================
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
-function switchTab(tab, scroll) {
+function switchTab(tab) {
+  if (tab === "bag") { setBagTab("bag"); return; }
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
   renderTab();
   if (tab === "quest") loadMissions();
-  if (scroll) $("tabPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (innerWidth < 1180) $("tabPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function renderTab() {
   if (!S) return;
-  ({ bag: renderBag, craft: renderCraft, quest: renderQuest, trade: renderTrade, rank: renderRank })[currentTab]();
+  ({ craft: renderCraft, quest: renderQuest, trade: renderTrade, rank: renderRank })[currentTab]();
 }
 function updateDots() {
   if (!S || !S.daily) return;
@@ -1245,32 +1309,51 @@ function effText(it) {
   return "";
 }
 
+// ---------- 행낭 (아이콘 격자) ----------
+document.querySelectorAll("[data-bag]").forEach((b) => b.onclick = () => setBagTab(b.dataset.bag));
+function setBagTab(t) {
+  bagTab = t;
+  document.querySelectorAll("[data-bag]").forEach((b) => b.classList.toggle("active", b.dataset.bag === t));
+  renderBag();
+}
+const ORDER = { food: 0, gear: 1, mat: 2 };
+function itemGlyph(it) { return it.glyph || it.name.replace(/\s/g, "").slice(0, 1); }
 function renderBag() {
-  const st = stats();
-  const slotName = { weapon: "무기", armor: "호구", charm: "패물" };
-  const equipHtml = Object.entries(S.equip).map(([slot, id]) => `
-    <div class="card"><div class="card-top"><span class="card-name">${slotName[slot]}</span></div>
-    ${id ? `<div>${ITEMS[id].name}</div><div class="card-eff">${effText(ITEMS[id])}</div><button class="btn btn-small" data-unequip="${slot}">벗기</button>` : `<div class="empty">비어 있음</div>`}</div>`).join("");
-
-  const groups = { food: [], gear: [], mat: [] };
-  for (const [id, n] of Object.entries(S.inv)) if (ITEMS[id]) groups[ITEMS[id].type].push([id, n]);
-  const cardOf = ([id, n]) => {
+  if (!S) return;
+  const entries = Object.entries(S.inv).filter(([id, n]) => ITEMS[id] && n > 0)
+    .sort((a, b) => ORDER[ITEMS[a[0]].type] - ORDER[ITEMS[b[0]].type] || ITEMS[a[0]].name.localeCompare(ITEMS[b[0]].name));
+  const cnt = { food: 0, gear: 0, mat: 0 };
+  for (const [id, n] of entries) cnt[ITEMS[id].type] += n;
+  $("bagCount").textContent = `${entries.length}종`;
+  if (bagTab === "gear") {
+    const slotName = { weapon: "무기", armor: "호구", charm: "패물" };
+    $("bagPanel").innerHTML = `<div class="eq-slots">${Object.entries(S.equip).map(([slot, id]) => `
+      <div class="eq-slot"><span class="k">${slotName[slot]}</span>
+      ${id ? `<b>${ITEMS[id].name}</b><span class="card-eff">${effText(ITEMS[id])}</span><button class="btn btn-small" data-unequip="${slot}">벗기</button>` : `<span class="empty">비어 있음</span>`}</div>`).join("")}</div>
+      <div class="pf-help" style="margin-top:8px">장비는 행낭에서 골라 「착용」한다. 장비는 공방에서 벼린다.</div>`;
+    $("itemDetail").innerHTML = "";
+    $("bagPanel").querySelectorAll("[data-unequip]").forEach((b) => b.onclick = () => unequip(b.dataset.unequip));
+    return;
+  }
+  const cells = entries.map(([id, n]) => {
     const it = ITEMS[id];
-    let btn = "";
-    if (it.type === "food") btn = `<button class="btn btn-small" data-use="${id}">먹기</button>`;
-    if (it.type === "gear") btn = `<button class="btn btn-small" data-equip="${id}">착용</button>`;
-    return `<div class="card"><div class="card-top"><span class="card-name ${it.rare ? "rare" : ""}">${it.name}</span><span class="card-count">×${n}</span></div>
-      <div class="card-desc">${it.desc}</div>${effText(it) ? `<div class="card-eff">${effText(it)}</div>` : ""}${btn}</div>`;
-  };
-  const sec = (label, arr) => `<div class="section-label">${label}</div>` + (arr.length ? `<div class="grid-list">${arr.map(cardOf).join("")}</div>` : `<div class="empty">없음</div>`);
-
-  $("tabPanel").innerHTML = `
-    <div class="section-label">착용</div><div class="equip-row">${equipHtml}</div>
-    ${sec("요리", groups.food)}${sec("장비", groups.gear)}${sec("재료", groups.mat)}`;
-
-  $("tabPanel").querySelectorAll("[data-use]").forEach((b) => b.onclick = () => useFood(b.dataset.use));
-  $("tabPanel").querySelectorAll("[data-equip]").forEach((b) => b.onclick = () => equip(b.dataset.equip));
-  $("tabPanel").querySelectorAll("[data-unequip]").forEach((b) => b.onclick = () => unequip(b.dataset.unequip));
+    return `<button class="icell ${it.type} ${it.rare ? "rare" : ""} ${selItem === id ? "sel" : ""}" data-item="${id}" title="${it.name} ×${n}">${itemGlyph(it)}<span class="n">${n}</span></button>`;
+  });
+  const minCells = 24;
+  while (cells.length < minCells) cells.push(`<span class="icell empty"></span>`);
+  $("bagPanel").innerHTML = `<div class="bag-legend"><span><i class="dot-food"></i>요리 ${cnt.food}</span><span><i class="dot-gear"></i>장비 ${cnt.gear}</span><span><i class="dot-mat"></i>재료 ${cnt.mat}</span></div>
+    <div class="igrid">${cells.join("")}</div>`;
+  $("bagPanel").querySelectorAll("[data-item]").forEach((b) => b.onclick = () => { selItem = selItem === b.dataset.item ? null : b.dataset.item; renderBag(); });
+  if (selItem && !S.inv[selItem]) selItem = null;
+  if (!selItem) { $("itemDetail").innerHTML = ""; return; }
+  const it = ITEMS[selItem];
+  let btn = "";
+  if (it.type === "food") btn = `<button class="btn btn-small btn-main" data-use="${selItem}">먹기</button>`;
+  if (it.type === "gear") btn = `<button class="btn btn-small btn-main" data-equip="${selItem}">착용</button>`;
+  $("itemDetail").innerHTML = `<b class="${it.rare ? "rare" : ""}">${it.name}</b> <span class="card-count">×${S.inv[selItem]}</span>
+    <div class="d">${it.desc}</div>${effText(it) ? `<div class="e">${effText(it)}</div>` : ""}${btn}`;
+  const u = $("itemDetail").querySelector("[data-use]"); if (u) u.onclick = () => useFood(u.dataset.use);
+  const e = $("itemDetail").querySelector("[data-equip]"); if (e) e.onclick = () => equip(e.dataset.equip);
 }
 
 function useFood(id) {
@@ -1655,6 +1738,90 @@ async function renameMe() {
   toast("이름을 바꿨다.");
 }
 
+
+// ============================================================
+//  지도 보기 전환 (주변 / 전도)
+// ============================================================
+document.querySelectorAll("[data-mapview]").forEach((b) => b.onclick = () => {
+  mapView = b.dataset.mapview;
+  document.querySelectorAll("[data-mapview]").forEach((x) => x.classList.toggle("active", x === b));
+  $("mmWrap").classList.toggle("hidden", mapView !== "all");
+});
+
+// ============================================================
+//  크기 조절선: 위(지도·임무)와 아래(선택지) 높이를 끌어서 바꾼다
+// ============================================================
+(function resizer() {
+  const g = $("g4"), r = $("resizer");
+  if (!g || !r) return;
+  let saved = null;
+  try { saved = localStorage.getItem("heukseon_toph"); } catch (e) {}
+  if (saved) g.style.setProperty("--top-h", saved);
+  let drag = null;
+  r.addEventListener("pointerdown", (e) => {
+    const top = g.querySelector(".c-map").getBoundingClientRect();
+    drag = { y: e.clientY, h: top.height, total: g.getBoundingClientRect().height };
+    r.classList.add("drag"); r.setPointerCapture(e.pointerId);
+  });
+  r.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const h = clamp(drag.h + e.clientY - drag.y, 260, drag.total - 140);
+    g.style.setProperty("--top-h", Math.round(h) + "px");
+  });
+  r.addEventListener("pointerup", () => {
+    if (!drag) return;
+    drag = null; r.classList.remove("drag");
+    try { localStorage.setItem("heukseon_toph", g.style.getPropertyValue("--top-h")); } catch (e) {}
+  });
+  r.addEventListener("dblclick", () => {
+    g.style.removeProperty("--top-h");
+    try { localStorage.removeItem("heukseon_toph"); } catch (e) {}
+  });
+})();
+
+// ============================================================
+//  주변 협객: 같은 자리 · 가까운 곳에 있는 참가자
+// ============================================================
+let others = null;
+async function loadNearby() {
+  if (mode !== "online" || !S) return;
+  const { data, error } = await sb.from("players").select("id, nickname, avatar, profile, level, merit, state, updated_at");
+  if (error) return;
+  others = (data || []).filter((p) => p.id !== uid && p.state && p.state.mapVer === MAP_VERSION)
+    .map((p) => ({ ...p, x: p.state.x, y: p.state.y, state: undefined }));
+  renderNearby();
+}
+function agoText(iso) {
+  const m = Math.floor((Date.now() - Date.parse(iso)) / 60000);
+  if (m < 10) return "움직이는 중";
+  if (m < 60) return `${m}분 전`;
+  if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
+  return `${Math.floor(m / 1440)}일 전`;
+}
+function dirText(dx, dy) {
+  const v = dy < 0 ? "북" : dy > 0 ? "남" : "", h = dx < 0 ? "서" : dx > 0 ? "동" : "";
+  return (v + h) || "";
+}
+function renderNearby() {
+  if (!S || !$("nearby")) return;
+  if (mode !== "online") { $("nearby").innerHTML = `<div class="empty">로그인하면 근처의 협객이 보인다.</div>`; $("nearCount").textContent = ""; return; }
+  if (others === null) { $("nearby").innerHTML = `<div class="empty">살피는 중…</div>`; return; }
+  const here = others.filter((p) => p.x === S.x && p.y === S.y);
+  const near = others.filter((p) => !(p.x === S.x && p.y === S.y) && Math.abs(p.x - S.x) + Math.abs(p.y - S.y) <= 4)
+    .sort((a, b) => (Math.abs(a.x - S.x) + Math.abs(a.y - S.y)) - (Math.abs(b.x - S.x) + Math.abs(b.y - S.y)));
+  const row = (p, sub) => `<button class="nb" data-nb="${p.id}">${avatarHtml(p.avatar, p.nickname, "sm")}<span class="tx"><b>${esc(p.nickname)}</b><small>${sub}</small></span></button>`;
+  $("nearCount").textContent = `이 자리 · ${here.length}명`;
+  let html = "";
+  html += here.length ? here.map((p) => row(p, `${esc((p.profile && p.profile.aff) || "무소속")} · ${agoText(p.updated_at)}`)).join("") : `<div class="empty">이 자리에는 아무도 없다.</div>`;
+  if (near.length) html += `<div class="nb-sec">가까이 (4칸 안)</div>` + near.map((p) => {
+    const d = Math.abs(p.x - S.x) + Math.abs(p.y - S.y);
+    const t = tileAt(p.x, p.y);
+    return row(p, `${dirText(p.x - S.x, p.y - S.y)}쪽 ${d}칸 · ${t ? t.name : ""} · ${agoText(p.updated_at)}`);
+  }).join("");
+  $("nearby").innerHTML = html;
+  $("nearby").querySelectorAll("[data-nb]").forEach((b) => b.onclick = () => openProfile(others.find((p) => p.id === b.dataset.nb)));
+}
+
 // ============================================================
 //  첫 화면: 자동 로그인 확인
 // ============================================================
@@ -1672,7 +1839,7 @@ window.addEventListener("beforeunload", () => { if (S && mode === "local") saveN
 setInterval(() => {
   if (!S) return;
   checkDailyReset(); renderHeader(); renderTile();
-  checkGifts(); checkMail(); loadGates(); loadMissions();
+  checkGifts(); checkMail(); loadGates(); loadMissions(); loadNearby();
 }, 60000);
 
 // ============================================================

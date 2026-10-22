@@ -47,7 +47,7 @@
         <div class="auth-hangul">풍운집결</div>
       </div>
     <div class="auth-box">
-      <h1 class="auth-title">풍운 집결</h1>
+      <h1 class="auth-title">풍운집결</h1>
       <p class="auth-sub">風雲集結 — 구름은 용을 따르고 바람은 호랑이를 따른다.</p>
       <p class="auth-lore">정도도, 선도도, 의리도 사라진 강호.<br>흑선채의 탑이 보이는 곳까지 왔다.<br>이제 남은 것은 한 걸음씩 나아가는 일뿐.</p>
 
@@ -73,83 +73,97 @@
 
   <!-- ===================== 게임 화면 ===================== -->
   <div id="gameScreen" class="screen hidden">
-    <header class="topbar">
-      <div class="brand" title="풍운집결 · 흑선행"><span class="brand-seal"><span>風雲</span><span>集結</span></span></div>
-
-      <button class="who" id="profileBtn" title="내 정보">
-        <span class="avatar avatar-md" id="hdrAvatar"></span>
-        <span class="who-text">
-          <span class="who-name"><b id="hdrName">—</b><span class="caret">▾</span></span>
-          <span class="who-sub" id="hdrSub">—</span>
-        </span>
-      </button>
-
-      <div class="chips">
-        <div class="chip chip-bar" title="기혈 (체력)">
-          <span class="chip-ic ic-hp">血</span><span class="chip-lb">기혈</span>
-          <span class="bar"><span class="bar-fill hp" id="hdrHpBar"></span></span><b id="hdrHp">0/0</b>
-        </div>
-        <div class="chip chip-bar" title="행동력 — 한국 시간 자정에 회복">
-          <span class="chip-ic ic-ap">行</span><span class="chip-lb">행동력</span>
-          <span class="bar"><span class="bar-fill ap" id="hdrApBar"></span></span><b id="hdrAp">0/0</b>
-        </div>
-        <div class="chip" title="수련 (다음 경지까지)"><span class="chip-ic">修</span><span class="chip-lb">수련</span><b id="hdrExp">0/0</b></div>
-        <div class="chip" title="공격"><span class="chip-ic">攻</span><span class="chip-lb">공격</span><b id="hdrAtk">0</b></div>
-        <div class="chip" title="방어"><span class="chip-ic">防</span><span class="chip-lb">방어</span><b id="hdrDef">0</b></div>
-        <div class="chip" title="신법 (속도)"><span class="chip-ic">迅</span><span class="chip-lb">신법</span><b id="hdrSpd">0</b></div>
-        <div class="chip" title="공적"><span class="chip-ic ic-gold">功</span><span class="chip-lb">공적</span><b id="hdrMerit">0</b></div>
-        <div class="chip" title="토벌 승리 횟수"><span class="chip-ic">討</span><span class="chip-lb">토벌</span><b id="hdrKills">0</b></div>
+    <!-- ===== 상단: 지금 있는 곳 · 시간 · 내 메뉴 ===== -->
+    <header class="topbar gbar">
+      <div class="brand" title="풍운집결 · 흑선행"><span class="brand-seal"><span>風雲</span><span>集結</span></span><span class="brand-name">흑선행</span></div>
+      <div class="loc">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <b id="hdrLoc">—</b><span class="loc-tags" id="hdrLocTags"></span>
       </div>
-
+      <div class="sky" id="hdrSky">—</div>
       <div class="top-actions">
-        <button class="icon-btn" id="mailBtn" title="우편함">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6l8.5 7 8.5-7"/></svg>
-          <span class="badge hidden" id="mailBadge">0</span>
-        </button>
-        <button class="icon-btn" id="profileBtn2" title="내 정보">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
-        </button>
+        <button class="who-mini" id="profileBtn2" title="내 정보"><span id="hdrName2">—</span></button>
+        <button class="icon-btn" id="mailBtn" title="우편함"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6l8.5 7 8.5-7"/></svg><span class="badge hidden" id="mailBadge">0</span></button>
         <button class="icon-btn theme-btn" data-theme-toggle title="밝은/어두운 화면 전환"></button>
-        <button class="icon-btn" id="logoutBtn" title="떠나기 (로그아웃)">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
-        </button>
+        <button class="icon-btn" id="logoutBtn" title="떠나기 (로그아웃)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg></button>
       </div>
     </header>
 
-    <main class="layout">
-      <!-- 왼쪽: 전도 + 지금 있는 곳 -->
-      <section class="side-col">
-        <div class="panel minimap-panel">
-          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
-          <div id="minimap" class="minimap"></div>
-          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>시야</span><span><i class="lg lg-camp"></i>기지</span><span><i class="lg lg-tower"></i>탑</span></div>
-        </div>
-        <div class="panel" id="tilePanel"></div>
-      </section>
+    <main class="g4" id="g4">
+      <!-- ① 왼쪽: 나 + 행낭 -->
+      <aside class="c-left">
+        <section class="panel me">
+          <div class="p-head"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><b>협객</b><span class="p-head-r" id="hdrLv">1성</span></div>
+          <button class="me-top" id="profileBtn" title="내 정보 열기">
+            <span class="avatar avatar-lgx" id="hdrAvatar"></span>
+            <span class="me-text"><b id="hdrName">—</b><span id="hdrSub">—</span><span class="me-here" id="hdrHere">● 이 자리에 있음</span></span>
+          </button>
+          <div class="gauge"><span class="g-ic ic-hp">血</span><span class="g-lb">기혈</span><span class="bar"><span class="bar-fill hp" id="hdrHpBar"></span></span><b id="hdrHp">0</b></div>
+          <div class="gauge"><span class="g-ic ic-ap">行</span><span class="g-lb">행동력</span><span class="bar"><span class="bar-fill ap" id="hdrApBar"></span></span><b id="hdrAp">0</b></div>
+          <div class="gauge"><span class="g-ic">修</span><span class="g-lb">수련</span><span class="bar"><span class="bar-fill exp" id="hdrExpBar"></span></span><b id="hdrExp">0</b></div>
+          <div class="statrow">
+            <span title="공격"><i>攻</i><b id="hdrAtk">0</b></span>
+            <span title="방어"><i>防</i><b id="hdrDef">0</b></span>
+            <span title="신법(속도)"><i>迅</i><b id="hdrSpd">0</b></span>
+            <span title="공적"><i class="gold">功</i><b id="hdrMerit">0</b></span>
+            <span title="토벌 승리"><i>討</i><b id="hdrKills">0</b></span>
+          </div>
+        </section>
+        <section class="panel bagp">
+          <div class="bag-tabs">
+            <button class="bt active" data-bag="bag" title="행낭"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span>행낭</span></button>
+            <button class="bt" data-bag="gear" title="장비"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/></svg><span>장비</span></button>
+            <span class="bag-count" id="bagCount"></span>
+          </div>
+          <div id="bagPanel" class="bag-body"></div>
+          <div id="itemDetail" class="item-detail"></div>
+        </section>
+      </aside>
 
-      <!-- 가운데: 지도 -->
-      <section class="map-col">
-        <div class="map-frame">
+      <!-- ② 지도 + 지금 있는 곳 -->
+      <section class="panel c-map">
+        <div class="p-head"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg><b>자리 지도</b>
+          <span class="seg2"><button class="active" data-mapview="near">주변</button><button data-mapview="all">전도</button></span>
+        </div>
+        <div class="map-wrap" id="mapWrap">
           <div id="map" class="map"></div>
-          <p class="map-hint">인접한 칸 클릭 · 방향키(WASD) · 이동마다 행동력 1</p>
+          <div class="mm-wrap hidden" id="mmWrap"><div id="minimap" class="minimap"></div><div class="mm-coord" id="mmCoord"></div></div>
         </div>
+        <div class="map-legend"><span><i class="lg lg-here"></i>지금</span><span><i class="lg lg-near"></i>갈 수 있는 곳</span><span><i class="lg lg-gate"></i>관문</span><span class="map-keys">방향키·WASD로 이동</span></div>
+        <div id="tilePanel" class="here-box"></div>
       </section>
 
-      <!-- 오른쪽: 행낭 · 공방 · 임무 · 교환 · 전공록 + 행적 -->
-      <section class="center-col">
-        <nav class="tabs">
-          <button class="tab active" data-tab="bag">행낭 <small>行囊</small></button>
-          <button class="tab" data-tab="craft">공방 <small>工房</small></button>
-          <button class="tab" data-tab="quest">임무 <small>任務</small><span class="tab-dot hidden" id="questDot"></span></button>
-          <button class="tab" data-tab="trade">교환 <small>交換</small><span class="tab-dot hidden" id="tradeDot"></span></button>
-          <button class="tab" data-tab="rank">전공록 <small>戰功錄</small></button>
-        </nav>
-        <section class="panel tab-panel" id="tabPanel"></section>
-        <div class="panel log-panel">
-          <h3 class="panel-title">행적 <small>行跡</small></h3>
-          <div id="log" class="log"></div>
+      <!-- ③ 임무 · 공방 · 교환 · 전공록 -->
+      <section class="panel c-quest">
+        <div class="p-head qtabs">
+          <button class="tab active" data-tab="quest" title="임무"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h10v16H6V6l2-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><span>임무</span><span class="tab-dot hidden" id="questDot"></span></button>
+          <button class="tab" data-tab="craft" title="공방"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4-9 9H5v-4l9-9z"/><path d="M12 8l4 4"/></svg><span>공방</span></button>
+          <button class="tab" data-tab="trade" title="교환"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg><span>교환</span><span class="tab-dot hidden" id="tradeDot"></span></button>
+          <button class="tab" data-tab="rank" title="전공록"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 6h3a3 3 0 0 1-3 3M7 6H4a3 3 0 0 0 3 3"/></svg><span>전공록</span></button>
         </div>
+        <section id="tabPanel" class="tab-panel"></section>
       </section>
+
+      <!-- 크기 조절선 -->
+      <div class="resizer" id="resizer" title="끌어서 위아래 크기 조절 (두 번 누르면 처음 크기)"><span>선을 끌어서 크기 조절</span></div>
+
+      <!-- ④ 선택지 -->
+      <section class="panel c-choice">
+        <div class="p-head"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><b>선택지</b><span class="p-head-r" id="choiceCount"></span></div>
+        <div id="choices" class="choices"></div>
+      </section>
+
+      <!-- ⑤ 오른쪽: 주변 협객 + 행적 -->
+      <aside class="c-right">
+        <section class="panel nearp">
+          <div class="p-head"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.6-5.5 6.5-5.5s5.5 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.5 1.7 5.5 4.5"/></svg><b>주변 협객</b><span class="p-head-r" id="nearCount"></span></div>
+          <div id="nearby" class="nearby"></div>
+        </section>
+        <section class="panel log-panel">
+          <div class="p-head"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg><b>행적</b><span class="p-head-r">行跡</span></div>
+          <div id="log" class="log"></div>
+        </section>
+      </aside>
     </main>
   </div>
 
