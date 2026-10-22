@@ -67,7 +67,8 @@
   --tZo-bg: #2f2c35;  --tZo-fg: #f0cf86;
 
   --font-body: "IBM Plex Sans KR", sans-serif;
-  --font-title: "Song Myung", serif;   /* 제목과 한자 인장 */
+  --font-title: "New Tegomin", "Song Myung", serif;   /* 한자: New Tegomin / 한글은 자동으로 송명체 */
+  --hanja-ls: -0.04em;   /* 한자 자간 (더 좁히려면 숫자를 더 작게) */
   --font-brush: "Nanum Brush Script", "Song Myung", serif;
 }
 
@@ -721,14 +722,14 @@ body.has-update .topbar { top: var(--ub, 46px); }
 .brand-seal {
   width: 38px; height: 38px; border: 2px solid var(--seal); color: var(--seal); background: rgba(200,57,47,.06);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  font-family: var(--font-title); font-size: 11px; line-height: 1; letter-spacing: 1px; transform: rotate(-5deg);
+  font-family: var(--font-title); font-size: 11px; line-height: 1; letter-spacing: var(--hanja-ls); transform: rotate(-5deg);
 }
 
 /* 입문 화면 */
 #authScreen { gap: 40px; }
 .auth-wrap { display: flex; align-items: center; gap: 48px; }
 .auth-title-block { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.auth-hanja { font-family: var(--font-title); font-size: 76px; line-height: 1.1; letter-spacing: .05em; color: var(--text); text-align: center; text-shadow: 0 2px 0 rgba(0,0,0,.08); }
+.auth-hanja { font-family: var(--font-title); font-size: 76px; line-height: 1.05; letter-spacing: -0.08em; color: var(--text); text-align: center; text-shadow: 0 2px 0 rgba(0,0,0,.08); }
 .auth-hangul { font-family: var(--font-brush); font-size: 40px; color: var(--gold); line-height: 1; }
 .auth-stamp {
   position: absolute; right: -26px; top: 46%; width: 46px; height: 46px; border: 2px solid var(--seal); color: var(--seal);
@@ -811,3 +812,7 @@ body.has-update .topbar { top: var(--ub, 46px); }
   .log { max-height: 240px; }
   .mm { width: 7px; height: 7px; }
 }
+
+/* 한자 자간 좁히기 (New Tegomin) */
+.tile, .tile-seal, .versus, .chip-ic, .auth-stamp, .auth-seal, .brand-seal, .tab small, .panel-title small, .minimap-label small, .pf-title small { letter-spacing: var(--hanja-ls); }
+.tab small, .panel-title small, .minimap-label small { font-family: var(--font-title); }
