@@ -4,111 +4,121 @@
    ============================================================ */
 
 /* ---------- 어두운 화면 (기본) ---------- */
+/* ---------- 어두운 화면: 쪽빛 밤 ---------- */
 :root {
-  --bg: #0a0807;
-  --bg-glow-1: rgba(142, 36, 32, 0.10);
-  --bg-glow-2: rgba(200, 163, 90, 0.05);
-  --panel: #14100e;
-  --panel-2: #1b1613;
-  --card-bg: rgba(10, 8, 7, 0.55);
-  --input-bg: #0d0b0a;
-  --topbar-bg: rgba(15, 12, 10, 0.92);
-  --line: #3b3029;
-  --line-soft: #2a221d;
-  --text: #ddd0bb;
-  --text-story: #cbbda6;
-  --text-desc: #c2b49d;
-  --dim: #8d7f6c;
-  --faint: #5a4f44;
-  --blood: #8e2420;
-  --blood-hi: #c4382f;
-  --gold: #c8a35a;
-  --jade: #6f9e8c;
-  --hp: #a8322b;
-  --hp-dark: #6b1a16;
-  --ap: #b48a3e;
-  --ap-dark: #7a5a22;
-  --enemy-bar: #5c3a6b;
-  --enemy-text: #c69a9a;
-  --crit: #ffcf7a;
+  --bg: #0b1322;
+  --bg-glow-1: rgba(70, 120, 200, 0.14);
+  --bg-glow-2: rgba(200, 60, 50, 0.06);
+  --panel: #101a2c;
+  --panel-2: #142136;
+  --card-bg: rgba(12, 20, 36, 0.6);
+  --input-bg: #0c1424;
+  --topbar-bg: rgba(12, 19, 33, 0.9);
+  --line: #2b3d5c;
+  --line-soft: #1f2d45;
+  --text: #e1e7f1;
+  --text-story: #c8d3e4;
+  --text-desc: #b9c6da;
+  --dim: #8496b3;
+  --faint: #56688a;
+  --blood: #9c2f28;
+  --blood-hi: #d0463b;
+  --gold: #8fb4e8;
+  --jade: #7fc0b0;
+  --hp: #c9483e;
+  --hp-dark: #6e1c17;
+  --ap: #5d93d8;
+  --ap-dark: #24487c;
+  --enemy-bar: #6b5a9a;
+  --enemy-text: #d7a3a3;
+  --crit: #f0c76a;
   --lvl: #f0d69a;
-  --btn-main-1: #7c1f1b;
-  --btn-main-2: #5a1512;
-  --btn-main-text: #f6e7d0;
-  --overlay: rgba(4, 3, 3, 0.82);
-  --modal-1: #1d1714;
-  --modal-2: #110d0b;
-  --map-bg: #0c0a09;
-  --shadow: rgba(0, 0, 0, 0.6);
+  --btn-main-1: #2c5aa0;
+  --btn-main-2: #1f4580;
+  --btn-main-text: #f2f6fc;
+  --overlay: rgba(4, 8, 16, 0.78);
+  --modal-1: #15223a;
+  --modal-2: #0e1729;
+  --map-bg: #0c1424;
+  --shadow: rgba(0, 0, 0, 0.55);
+  --seal: #c8392f;
 
-  /* 지도 칸 색: 배경 / 글자 */
-  --fog-bg: #0f0d0c;  --fog-fg: #2c2622;
-  --tC-bg: #3a2a17;   --tC-fg: #e6b866;
-  --tE-bg: #2f2616;   --tE-fg: #d2a85e;
-  --tF-bg: #142218;   --tF-fg: #6f9a6c;
-  --tR-bg: #2a2018;   --tR-fg: #a88d6c;
-  --tM-bg: #26261a;   --tM-fg: #9d9a5a;
-  --tP-bg: #1c1f24;   --tP-fg: #8b96a3;
-  --tW-bg: #0f1a24;   --tW-fg: #5f86a3;
-  --tT-bg: #241a26;   --tT-fg: #a383a6;
-  --tB-bg: #2a1714;   --tB-fg: #b07462;
-  --tO-bg: #2d0f0d;   --tO-fg: #cc5a4c;
-  --tX-bg: #120606;   --tX-fg: #ff4d3d;
+  /* 배경 장식(찢긴 종이) 색 */
+  --tear-1: #1a3358; --tear-2: #24467a; --tear-3: #345d97; --tear-4: #142844;
+  --sun: #b8362c; --grain: rgba(160, 190, 240, 0.05); --decor-opacity: .55;
+
+  --fog-bg: #0f1828;  --fog-fg: #26354f;
+  --tC-bg: #2f2a1c;   --tC-fg: #e6c27a;
+  --tE-bg: #2a2a22;   --tE-fg: #d2b06e;
+  --tF-bg: #13261f;   --tF-fg: #77a88a;
+  --tR-bg: #262230;   --tR-fg: #a9a0c0;
+  --tM-bg: #1f2a24;   --tM-fg: #97a87a;
+  --tP-bg: #1a2433;   --tP-fg: #8ea3c2;
+  --tW-bg: #10243f;   --tW-fg: #6ea2dc;
+  --tT-bg: #241c33;   --tT-fg: #ab92c8;
+  --tB-bg: #2c1b20;   --tB-fg: #c08a86;
+  --tO-bg: #33141a;   --tO-fg: #e0645a;
+  --tX-bg: #0a0508;   --tX-fg: #ff5244;
 
   --font-body: "IBM Plex Sans KR", sans-serif;
-  --font-title: "Song Myung", serif;   /* 흑선행 제목과 한자 인장에만 사용 */
+  --font-title: "Song Myung", serif;   /* 제목과 한자 인장 */
+  --font-brush: "Nanum Brush Script", "Song Myung", serif;
 }
 
-/* ---------- 밝은 화면 (한지 느낌) ---------- */
+/* ---------- 밝은 화면: 한지 위 쪽빛 ---------- */
 :root[data-theme="light"] {
-  --bg: #ebe3d4;
-  --bg-glow-1: rgba(155, 43, 36, 0.07);
-  --bg-glow-2: rgba(140, 100, 33, 0.07);
-  --panel: #f3ede2;
-  --panel-2: #faf6ee;
-  --card-bg: rgba(255, 253, 248, 0.75);
-  --input-bg: #fffdf8;
-  --topbar-bg: rgba(246, 241, 232, 0.94);
-  --line: #c9baa2;
-  --line-soft: #e0d5c3;
-  --text: #2b231d;
-  --text-story: #43372d;
-  --text-desc: #4f4236;
-  --dim: #6e6152;
-  --faint: #9a8c7a;
-  --blood: #9b2b24;
-  --blood-hi: #b5332a;
-  --gold: #8c6421;
-  --jade: #3c6d5f;
-  --hp: #b13a30;
-  --hp-dark: #d77a6f;
-  --ap: #a77a2a;
-  --ap-dark: #d8b46d;
-  --enemy-bar: #7d5a8c;
+  --bg: #ece7dc;
+  --bg-glow-1: rgba(60, 100, 170, 0.07);
+  --bg-glow-2: rgba(200, 60, 50, 0.04);
+  --panel: #f3efe6;
+  --panel-2: #faf8f2;
+  --card-bg: rgba(255, 254, 250, 0.78);
+  --input-bg: #fffefa;
+  --topbar-bg: rgba(247, 244, 237, 0.93);
+  --line: #c7c3b8;
+  --line-soft: #e0dbcf;
+  --text: #1c2433;
+  --text-story: #33405a;
+  --text-desc: #3e4a60;
+  --dim: #66708a;
+  --faint: #9aa0ae;
+  --blood: #a3342b;
+  --blood-hi: #bf3a2f;
+  --gold: #2c5aa0;
+  --jade: #2f6d74;
+  --hp: #bf3a2f;
+  --hp-dark: #e39a91;
+  --ap: #2f62ad;
+  --ap-dark: #9dbbe4;
+  --enemy-bar: #7a68a8;
   --enemy-text: #8a3b3b;
   --crit: #a8650a;
   --lvl: #8a5a10;
-  --btn-main-1: #a3302a;
-  --btn-main-2: #86231e;
-  --btn-main-text: #fff8ec;
-  --overlay: rgba(60, 48, 36, 0.45);
-  --modal-1: #fbf7ef;
-  --modal-2: #f1e9dc;
-  --map-bg: #e3d9c8;
-  --shadow: rgba(80, 60, 40, 0.25);
+  --btn-main-1: #284f8e;
+  --btn-main-2: #1c3d72;
+  --btn-main-text: #fbfaf6;
+  --overlay: rgba(40, 50, 70, 0.4);
+  --modal-1: #fcfaf5;
+  --modal-2: #f2eee4;
+  --map-bg: #e6e1d5;
+  --shadow: rgba(40, 50, 80, 0.2);
+  --seal: #c8392f;
 
-  --fog-bg: #ddd3c2;  --fog-fg: #bdb09b;
-  --tC-bg: #ecd3a2;   --tC-fg: #7a4f12;
-  --tE-bg: #e8dcbf;   --tE-fg: #6a5228;
-  --tF-bg: #cfe0c9;   --tF-fg: #2f5a2c;
-  --tR-bg: #e3d3bd;   --tR-fg: #6b4f2e;
-  --tM-bg: #dcdab4;   --tM-fg: #5d5a1e;
-  --tP-bg: #d3d9e0;   --tP-fg: #3d4a58;
-  --tW-bg: #c6d9e7;   --tW-fg: #23506f;
-  --tT-bg: #e0d1e3;   --tT-fg: #5e3f63;
-  --tB-bg: #e9cfc5;   --tB-fg: #7a3b2a;
-  --tO-bg: #efc6bf;   --tO-fg: #8f2318;
-  --tX-bg: #2a1010;   --tX-fg: #ff5544;
+  --tear-1: #2a4a7c; --tear-2: #4d74ad; --tear-3: #8fa9cf; --tear-4: #1d355f;
+  --sun: #c8392f; --grain: rgba(80, 70, 50, 0.09); --decor-opacity: 1;
+
+  --fog-bg: #e2ddd0;  --fog-fg: #bbb5a6;
+  --tC-bg: #ecdcb6;   --tC-fg: #7a5512;
+  --tE-bg: #e7e0c9;   --tE-fg: #6a5428;
+  --tF-bg: #d3e2d6;   --tF-fg: #2d5a3e;
+  --tR-bg: #e2dccf;   --tR-fg: #5e5340;
+  --tM-bg: #dde0c6;   --tM-fg: #565c26;
+  --tP-bg: #d6dce6;   --tP-fg: #384a64;
+  --tW-bg: #c7d7ec;   --tW-fg: #1f4c86;
+  --tT-bg: #ddd5e6;   --tT-fg: #54406b;
+  --tB-bg: #e8d4cf;   --tB-fg: #7a3b2e;
+  --tO-bg: #efcbc5;   --tO-fg: #8f2318;
+  --tX-bg: #1a1f2e;   --tX-fg: #ff5544;
 }
 
 * { box-sizing: border-box; }
@@ -326,7 +336,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .minimap-label span { margin-left: 6px; letter-spacing: 0; }
 .minimap { display: grid; gap: 1px; padding: 4px; background: var(--map-bg); border: 1px solid var(--line); }
 .mm { width: 8px; height: 8px; }
-.mm.view { outline: 1px solid rgba(200,163,90,.55); outline-offset: -1px; }
+.mm.view { outline: 1px solid var(--gold); outline-offset: -1px; }
 .mm.fog { background: var(--fog-bg); }
 .mm.here { background: var(--blood-hi) !important; box-shadow: 0 0 4px var(--blood-hi); }
 .mm.rumor { background: var(--blood); opacity: .7; }
@@ -477,15 +487,15 @@ input:focus, select:focus { border-color: var(--gold); }
   position: fixed; top: 0; left: 0; right: 0; z-index: 90;
   min-height: 46px; padding: 8px 48px 8px 16px;
   display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
-  background: linear-gradient(90deg, #3a0f0c, #5c1712 50%, #3a0f0c);
+  background: linear-gradient(90deg, #16305a, #23477e 50%, #16305a);
   color: #f4e6d2;
-  border-bottom: 1px solid var(--blood-hi);
+  border-bottom: 1px solid #5d8fd6;
   box-shadow: 0 4px 18px var(--shadow);
   font-size: 14px; text-align: center;
   animation: barIn .4s ease-out;
 }
 @keyframes barIn { from { transform: translateY(-100%); } to { transform: none; } }
-.update-text b { color: #f3d79a; font-weight: 700; margin-right: 4px; }
+.update-text b { color: #f1d69b; font-weight: 700; margin-right: 4px; }
 .update-close {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
   background: none; border: none; color: #c9b7a0; font-size: 22px; cursor: pointer; padding: 4px 8px;
@@ -614,6 +624,67 @@ body.has-update .topbar { top: var(--ub, 46px); }
   .chip .bar { width: 40px; }
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
   .pf-row { flex-direction: column; align-items: center; }
+}
+
+
+/* ============================================================
+   풍운집결 장식: 찢긴 종이 산수, 붉은 해, 한지 결
+   ============================================================ */
+.decor { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; opacity: var(--decor-opacity); }
+.screen, .tabs, .tab-panel, .layout { position: relative; z-index: 1; }
+.d-tear { position: absolute; }
+.d-l1 { left: -40px; top: -20px; width: 300px; height: 110vh; background: var(--tear-2);
+  clip-path: polygon(0 0,100% 0,80% 7%,94% 16%,66% 27%,86% 38%,58% 51%,78% 63%,52% 75%,70% 87%,46% 100%,0 100%); }
+.d-l2 { left: -40px; top: 18vh; width: 210px; height: 90vh; background: var(--tear-1);
+  clip-path: polygon(0 0,66% 5%,100% 18%,62% 32%,88% 47%,56% 62%,82% 78%,38% 100%,0 100%); }
+.d-l3 { left: 120px; bottom: -30px; width: 160px; height: 38vh; background: var(--tear-3);
+  clip-path: polygon(20% 0,60% 12%,48% 30%,82% 46%,64% 64%,100% 100%,0 100%,10% 60%,0 30%); opacity: .8; }
+.d-r1 { right: -40px; top: 34vh; width: 260px; height: 80vh; background: var(--tear-3);
+  clip-path: polygon(40% 0,100% 0,100% 100%,0 100%,28% 86%,6% 72%,34% 54%,12% 36%,42% 18%); }
+.d-r2 { right: -40px; top: 52vh; width: 180px; height: 60vh; background: var(--tear-4);
+  clip-path: polygon(60% 0,100% 0,100% 100%,0 100%,18% 78%,4% 58%,32% 38%,20% 18%); }
+.d-r3 { right: -20px; top: -20px; width: 110px; height: 22vh; background: var(--tear-2);
+  clip-path: polygon(0 0,100% 0,90% 30%,100% 60%,70% 100%,50% 70%,20% 90%,30% 50%); opacity: .7; }
+.d-sun { position: absolute; z-index: 1; right: 3.5vw; top: 13vh; width: 140px; height: 140px; border-radius: 50%; background: var(--sun); opacity: .9; }
+.d-moon { position: absolute; z-index: 1; right: 2vw; top: 8vh; width: 26px; height: 26px; border-radius: 50%; box-shadow: -7px 5px 0 0 #c9a356; }
+.d-grain { position: absolute; inset: 0; background-image: radial-gradient(var(--grain) 1px, transparent 1.2px); background-size: 4px 4px; }
+.d-tear { filter: drop-shadow(1px 0 0 rgba(255,255,255,.18)); }
+
+/* 패널에 한지 결 */
+.panel, .auth-box, .modal-box, .tab {
+  background-image: radial-gradient(var(--grain) 1px, transparent 1.2px), linear-gradient(180deg, var(--panel-2), var(--panel));
+  background-size: 4px 4px, auto;
+}
+.tab.active { background-image: radial-gradient(var(--grain) 1px, transparent 1.2px); background-size: 4px 4px; }
+
+/* 상단 바 낙관 */
+.brand-seal {
+  width: 38px; height: 38px; border: 2px solid var(--seal); color: var(--seal); background: rgba(200,57,47,.06);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-family: var(--font-title); font-size: 11px; line-height: 1; letter-spacing: 1px; transform: rotate(-5deg);
+}
+
+/* 입문 화면 */
+#authScreen { gap: 40px; }
+.auth-wrap { display: flex; align-items: center; gap: 48px; }
+.auth-title-block { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.auth-hanja { font-family: var(--font-title); font-size: 76px; line-height: 1.1; letter-spacing: .05em; color: var(--text); text-align: center; text-shadow: 0 2px 0 rgba(0,0,0,.08); }
+.auth-hangul { font-family: var(--font-brush); font-size: 40px; color: var(--gold); line-height: 1; }
+.auth-stamp {
+  position: absolute; right: -26px; top: 46%; width: 46px; height: 46px; border: 2px solid var(--seal); color: var(--seal);
+  font-family: var(--font-title); font-size: 13px; line-height: 1.05; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transform: rotate(-8deg); background: rgba(200,57,47,.05);
+}
+.auth-box { border-top: 3px solid var(--btn-main-1); }
+.auth-title { font-family: var(--font-title); }
+@media (max-width: 860px) {
+  .auth-wrap { flex-direction: column; gap: 18px; }
+  .auth-hanja { font-size: 52px; }
+  .auth-hangul { font-size: 30px; }
+  .auth-stamp { right: -40px; }
+  .d-l1, .d-r1 { width: 140px; } .d-l2, .d-r2 { width: 100px; } .d-l3, .d-r3 { display: none; }
+  .d-sun { width: 80px; height: 80px; right: 4vw; top: 4vh; opacity: .55; }
+  .decor { opacity: calc(var(--decor-opacity) * .5); }
 }
 
 /* ---------- 모바일 ---------- */

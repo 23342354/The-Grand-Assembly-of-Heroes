@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>흑선행 黑線行</title>
+  <title>풍운집결 風雲集結 · 흑선행</title>
   <script>
     // 화면 테마: 저장된 선택 > 기기 설정 순서로 정함 (깜빡임 방지를 위해 맨 먼저 실행)
     (function () {
@@ -15,10 +15,18 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Song+Myung&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Nanum+Brush+Script&family=Song+Myung&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- 배경 장식: 찢긴 종이 산수 (클릭에는 영향 없음) -->
+  <div class="decor" aria-hidden="true">
+    <div class="d-sun"></div><div class="d-moon"></div>
+    <div class="d-tear d-l1"></div><div class="d-tear d-l2"></div><div class="d-tear d-l3"></div>
+    <div class="d-tear d-r1"></div><div class="d-tear d-r2"></div><div class="d-tear d-r3"></div>
+    <div class="d-grain"></div>
+  </div>
 
   <!-- 새 버전 알림 띠 -->
   <div id="updateBar" class="update-bar hidden">
@@ -30,8 +38,13 @@
   <!-- ===================== 입문(로그인) 화면 ===================== -->
   <div id="authScreen" class="screen">
     <button class="theme-btn theme-btn-float" data-theme-toggle title="밝은/어두운 화면 전환"></button>
+    <div class="auth-wrap">
+      <div class="auth-title-block">
+        <div class="auth-hanja">風雲<br>集結</div>
+        <div class="auth-stamp"><span>黑線</span><span>之行</span></div>
+        <div class="auth-hangul">풍운집결</div>
+      </div>
     <div class="auth-box">
-      <div class="auth-seal"><span>黑</span><span>線</span></div>
       <h1 class="auth-title">흑선행</h1>
       <p class="auth-sub">黑線行 — 선을 넘은 자들을 쫓아</p>
       <p class="auth-lore">정도도, 선도도, 의리도 사라진 강호.<br>흑선채의 탑이 보이는 곳까지 왔다.<br>이제 남은 것은 한 걸음씩 나아가는 일뿐.</p>
@@ -53,12 +66,13 @@
       <button id="localBtn" class="btn btn-ghost">체험 모드로 들어가기</button>
       <p class="auth-note">체험 모드는 이 기기에만 기록되며, 교환·공동 임무·전공록을 쓸 수 없습니다.</p>
     </div>
+    </div>
   </div>
 
   <!-- ===================== 게임 화면 ===================== -->
   <div id="gameScreen" class="screen hidden">
     <header class="topbar">
-      <div class="brand" title="흑선행"><span class="brand-seal">黑</span></div>
+      <div class="brand" title="풍운집결 · 흑선행"><span class="brand-seal"><span>風雲</span><span>集結</span></span></div>
 
       <button class="who" id="profileBtn" title="내 정보">
         <span class="avatar avatar-md" id="hdrAvatar"></span>
