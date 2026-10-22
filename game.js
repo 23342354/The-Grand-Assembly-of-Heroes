@@ -1354,9 +1354,9 @@ function renderBag() {
   const cells = entries.map(([id, n]) => {
     const it = ITEMS[id];
     return `<button class="icell ${it.type} ${it.rare ? "rare" : ""} ${selItem === id ? "sel" : ""}" data-item="${id}" title="${it.name} ×${n}">
-      <span class="art">${itemArt(id)}</span><span class="foot"><span class="nm">${it.name}</span><span class="n">${n}</span></span></button>`;
+      <span class="nm">${it.name}</span><span class="n">${n}</span></button>`;
   });
-  const minCells = 12;
+  const minCells = 0;
   while (cells.length < minCells) cells.push(`<span class="icell empty"></span>`);
   $("bagPanel").innerHTML = `<div class="bag-legend"><span><i class="dot-food"></i>요리 ${cnt.food}</span><span><i class="dot-gear"></i>장비 ${cnt.gear}</span><span><i class="dot-mat"></i>재료 ${cnt.mat}</span></div>
     <div class="igrid">${cells.join("")}</div>`;
@@ -1367,7 +1367,7 @@ function renderBag() {
   let btn = "";
   if (it.type === "food") btn = `<button class="btn btn-small btn-main" data-use="${selItem}">먹기</button>`;
   if (it.type === "gear") btn = `<button class="btn btn-small btn-main" data-equip="${selItem}">착용</button>`;
-  $("itemDetail").innerHTML = `<div class="det-head"><span class="det-art ${it.type}">${itemArt(selItem)}</span><span><b class="${it.rare ? "rare" : ""}">${it.name}</b> <span class="card-count">×${S.inv[selItem]}</span></span></div>
+  $("itemDetail").innerHTML = `<div class="det-head"><b class="${it.rare ? "rare" : ""}">${it.name}</b> <span class="card-count">×${S.inv[selItem]}</span></div>
     <div class="d">${it.desc}</div>${effText(it) ? `<div class="e">${effText(it)}</div>` : ""}${btn}`;
   const u = $("itemDetail").querySelector("[data-use]"); if (u) u.onclick = () => useFood(u.dataset.use);
   const e = $("itemDetail").querySelector("[data-equip]"); if (e) e.onclick = () => equip(e.dataset.equip);
