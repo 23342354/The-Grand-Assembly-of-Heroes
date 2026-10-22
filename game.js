@@ -395,7 +395,7 @@ function renderTile() {
   if (t.camp) actions += `<button class="btn" id="actCraft">공방 열기</button>`;
   if (t.drops.length) actions += `<button class="btn" id="actExplore" ${S.ap < RULES.exploreCost ? "disabled" : ""}>탐색 <small>행동력 ${RULES.exploreCost}</small></button>`;
   if (t.monsters.length) actions += `<button class="btn btn-main" id="actHunt" ${S.ap < RULES.huntCost ? "disabled" : ""}>${MONSTERS[t.monsters[0]].boss ? "수문장에게 도전" : "토벌"} <small>행동력 ${RULES.huntCost}</small></button>`;
-  if (!t.camp) actions += `<button class="btn btn-ghost" id="actHome" title="기지 방향 안내">기지 방향</button>`;
+  if (!t.camp) actions += `<button class="btn btn-ghost" id="actHome" title="행동력 없이 임시 기지로 곧장 돌아간다">기지로 귀환 <small>행동력 0</small></button>`;
   const buff = S.buff ? `<div class="buff-line">◈ 다음 토벌 효과: ${buffText(S.buff)}</div>` : "";
   $("tilePanel").innerHTML = `
     <div class="tile-head">
@@ -412,11 +412,7 @@ function renderTile() {
   on("actCraft", () => switchTab("craft", true));
   on("actExplore", explore);
   on("actHunt", () => hunt(false));
-  on("actHome", () => {
-    const dx = CAMP.x - S.x, dy = CAMP.y - S.y;
-    const dir = [dy < 0 ? `북으로 ${-dy}` : dy > 0 ? `남으로 ${dy}` : "", dx < 0 ? `서로 ${-dx}` : dx > 0 ? `동으로 ${dx}` : ""].filter(Boolean).join(", ");
-    toast(`기지는 ${dir}칸 거리에 있다.`);
-  });
+  on("actHome", returnToCamp);
 }
 
 function buffText(b) {
@@ -487,6 +483,15 @@ function move(nx, ny) {
     log("인기척. 미처 칼을 뽑기도 전에 놈들이 덮쳐온다!", "bad");
     setTimeout(() => hunt(true), 400);
   }
+}
+
+// 기지로 귀환: 행동력 없이 곧장 임시 기지로 (밝혀 둔 땅은 그대로)
+function returnToCamp() {
+  if (busy || tileAt(S.x, S.y).camp) return;
+  S.x = CAMP.x; S.y = CAMP.y;
+  log("길을 되짚어 임시 기지로 돌아왔다. 화톳불이 반긴다.", "sys");
+  save();
+  renderAll();
 }
 
 // 보스가 있는 칸(흑선탑)에서는 매복이 없다. 수문장과는 스스로 도전해야만 싸운다.
