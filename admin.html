@@ -63,6 +63,16 @@
     .g-row .info span { color: var(--dim); }
     .adm-map { display: grid; grid-template-columns: repeat(21, 1fr); gap: 1px; max-width: 420px; }
     .adm-map i { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-style: normal; font-family: var(--font-title); font-size: 11px; }
+    .ic-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+    .ic-grp { grid-column: 1 / -1; font-size: 13px; color: var(--dim); margin: 8px 0 0; letter-spacing: .1em; }
+    .ic-row { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line-soft); background: var(--card-bg); }
+    .ic-prev { width: 56px; height: 56px; flex-shrink: 0; border: 1px dashed var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 3px;
+      background: repeating-conic-gradient(var(--line-soft) 0 25%, transparent 0 50%) 0 0 / 10px 10px; font-family: var(--font-title); font-size: 22px; color: var(--faint); }
+    .ic-prev img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .ic-info { flex: 1; min-width: 0; font-size: 12.5px; }
+    .ic-info b { display: block; font-size: 14px; }
+    .ic-info span { color: var(--faint); }
+    .ic-btns { display: flex; flex-direction: column; gap: 4px; }
     @media (max-width: 860px) { .adm-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -101,6 +111,7 @@
       <button class="pf-tab active" data-at="mail">우편 · 물품 지급</button>
       <button class="pf-tab" data-at="mission">주간 의뢰 · 공동 임무</button>
       <button class="pf-tab" data-at="gates">맵 해금</button>
+      <button class="pf-tab" data-at="icons">아이템 그림</button>
     </nav>
 
     <div id="at-mail" class="adm-sec">
@@ -190,7 +201,20 @@
         </section>
       </div>
     </div>
+
+    <!-- 아이템 그림 -->
+    <div id="at-icons" class="adm-sec hidden">
+      <section class="panel">
+        <h3 class="panel-title">아이템 그림 <small>정사각형 PNG(투명 배경 권장) · 자동으로 128×128로 줄여 저장 · 참가자 화면에 1분 안에 반영</small></h3>
+        <div class="bar-line">
+          <input id="icSearch" placeholder="아이템 이름으로 찾기">
+          <label class="pf-inline" style="font-size:13px;color:var(--dim)"><input type="checkbox" id="icMissing" style="width:auto"> 그림 없는 것만</label>
+        </div>
+        <div id="icList" class="ic-list"></div>
+      </section>
+    </div>
   </main>
+  <input type="file" id="icFile" accept="image/png,image/webp,image/jpeg,image/gif" class="hidden">
 
   <div id="toast" class="toast"></div>
 

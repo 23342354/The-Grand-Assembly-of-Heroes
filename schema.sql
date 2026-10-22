@@ -245,3 +245,32 @@ $$;
 
 revoke all on function public.mission_add(bigint, integer) from public, anon;
 grant execute on function public.mission_add(bigint, integer) to authenticated;
+
+-- ============================================================
+--  아이템 그림 (운영진이 admin.html에서 등록)
+-- ============================================================
+create table if not exists public.item_icons (
+  id          text primary key check (char_length(id) between 1 and 40),
+  img         text not null check (img like 'data:image/%' and length(img) <= 80000),
+  updated_at  timestamptz not null default now()
+);
+alter table public.item_icons enable row level security;
+
+drop policy if exists "누구나 그림 보기" on public.item_icons;
+create policy "누구나 그림 보기" on public.item_icons
+  for select to anon, authenticated using (true);
+
+drop policy if exists "운영진만 그림 등록" on public.item_icons;
+create policy "운영진만 그림 등록" on public.item_icons
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "운영진만 그림 변경" on public.item_icons;
+create policy "운영진만 그림 변경" on public.item_icons
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "운영진만 그림 삭제" on public.item_icons;
+create policy "운영진만 그림 삭제" on public.item_icons
+  for delete to authenticated using (public.is_admin());
+
+grant select on public.item_icons to anon, authenticated;
+grant insert, update, delete on public.item_icons to authenticated;

@@ -303,7 +303,7 @@ function enterGame(isNew) {
   checkDailyReset();
   renderAll();
   save();
-  loadGates(); loadMissions();
+  loadGates(); loadMissions(); loadItemIcons();
   if (mode === "online") { checkGifts(); checkMail(); loadNearby(); }
 }
 
@@ -1318,6 +1318,22 @@ function setBagTab(t) {
 }
 const ORDER = { food: 0, gear: 1, mat: 2 };
 function itemGlyph(it) { return it.glyph || it.name.replace(/\s/g, "").slice(0, 1); }
+
+// 운영진이 admin.html에서 등록한 아이템 그림
+let itemIcons = {};
+const ICON_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+async function loadItemIcons() {
+  if (!sb) return;
+  const { data, error } = await sb.from("item_icons").select("id, img");
+  if (error) return;
+  itemIcons = {};
+  for (const r of data || []) if (ICON_RE.test(r.img)) itemIcons[r.id] = r.img;
+  if (S) renderBag();
+}
+function itemArt(id) {
+  const it = ITEMS[id];
+  return itemIcons[id] ? `<img src="${itemIcons[id]}" alt="">` : `<span class="glyph">${itemGlyph(it)}</span>`;
+}
 function renderBag() {
   if (!S) return;
   const entries = Object.entries(S.inv).filter(([id, n]) => ITEMS[id] && n > 0)
@@ -1337,9 +1353,10 @@ function renderBag() {
   }
   const cells = entries.map(([id, n]) => {
     const it = ITEMS[id];
-    return `<button class="icell ${it.type} ${it.rare ? "rare" : ""} ${selItem === id ? "sel" : ""}" data-item="${id}" title="${it.name} ×${n}">${itemGlyph(it)}<span class="n">${n}</span></button>`;
+    return `<button class="icell ${it.type} ${it.rare ? "rare" : ""} ${selItem === id ? "sel" : ""}" data-item="${id}" title="${it.name} ×${n}">
+      <span class="art">${itemArt(id)}</span><span class="foot"><span class="nm">${it.name}</span><span class="n">${n}</span></span></button>`;
   });
-  const minCells = 24;
+  const minCells = 12;
   while (cells.length < minCells) cells.push(`<span class="icell empty"></span>`);
   $("bagPanel").innerHTML = `<div class="bag-legend"><span><i class="dot-food"></i>요리 ${cnt.food}</span><span><i class="dot-gear"></i>장비 ${cnt.gear}</span><span><i class="dot-mat"></i>재료 ${cnt.mat}</span></div>
     <div class="igrid">${cells.join("")}</div>`;
@@ -1350,7 +1367,7 @@ function renderBag() {
   let btn = "";
   if (it.type === "food") btn = `<button class="btn btn-small btn-main" data-use="${selItem}">먹기</button>`;
   if (it.type === "gear") btn = `<button class="btn btn-small btn-main" data-equip="${selItem}">착용</button>`;
-  $("itemDetail").innerHTML = `<b class="${it.rare ? "rare" : ""}">${it.name}</b> <span class="card-count">×${S.inv[selItem]}</span>
+  $("itemDetail").innerHTML = `<div class="det-head"><span class="det-art ${it.type}">${itemArt(selItem)}</span><span><b class="${it.rare ? "rare" : ""}">${it.name}</b> <span class="card-count">×${S.inv[selItem]}</span></span></div>
     <div class="d">${it.desc}</div>${effText(it) ? `<div class="e">${effText(it)}</div>` : ""}${btn}`;
   const u = $("itemDetail").querySelector("[data-use]"); if (u) u.onclick = () => useFood(u.dataset.use);
   const e = $("itemDetail").querySelector("[data-equip]"); if (e) e.onclick = () => equip(e.dataset.equip);
@@ -1900,5 +1917,5 @@ setInterval(checkUpdate, 3 * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   checkUpdate();
-  checkGifts(); checkMail(); loadGates(); loadMissions();
+  checkGifts(); checkMail(); loadGates(); loadMissions(); loadItemIcons();
 });

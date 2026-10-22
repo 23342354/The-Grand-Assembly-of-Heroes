@@ -204,6 +204,7 @@ document.querySelectorAll("[data-at]").forEach((b) => b.onclick = () => {
   document.querySelectorAll(".adm-sec").forEach((sec) => sec.classList.toggle("hidden", sec.id !== "at-" + b.dataset.at));
   if (b.dataset.at === "mission") loadMissions();
   if (b.dataset.at === "gates") loadGates();
+  if (b.dataset.at === "icons") loadIcons();
 });
 
 // ============================================================
@@ -382,3 +383,75 @@ function renderGateMap() {
   }
   $("gMap").innerHTML = html;
 }
+
+// ============================================================
+//  아이템 그림 등록
+// ============================================================
+let icons = {};
+let icTarget = null;
+const TYPE_LABEL = { food: "요리", gear: "장비", mat: "재료" };
+async function loadIcons() {
+  const { data, error } = await sb.from("item_icons").select("id, img, updated_at");
+  if (error) { $("icList").innerHTML = `<div class="notice">불러오기 실패: ${esc(error.message)}<br>schema.sql을 다시 Run 했는지 확인하세요.</div>`; return; }
+  icons = Object.fromEntries(data.map((r) => [r.id, r]));
+  renderIcons();
+}
+function renderIcons() {
+  const q = $("icSearch").value.trim();
+  const onlyMissing = $("icMissing").checked;
+  let html = "";
+  for (const type of ["mat", "food", "gear"]) {
+    const list = Object.entries(ITEMS).filter(([id, it]) => it.type === type && (!q || it.name.includes(q)) && (!onlyMissing || !icons[id]));
+    if (!list.length) continue;
+    const have = list.filter(([id]) => icons[id]).length;
+    html += `<div class="ic-grp">${TYPE_LABEL[type]} · ${have}/${list.length} 등록</div>`;
+    html += list.map(([id, it]) => {
+      const ic = icons[id];
+      return `<div class="ic-row">
+        <span class="ic-prev">${ic ? `<img src="${ic.img}" alt="">` : esc(it.name.slice(0, 1))}</span>
+        <span class="ic-info"><b>${esc(it.name)}</b><span>${id}${ic ? " · " + fmt(ic.updated_at) : " · 그림 없음"}</span></span>
+        <span class="ic-btns"><button class="btn btn-small ${ic ? "" : "btn-main"}" data-icup="${id}">${ic ? "바꾸기" : "그림 올리기"}</button>
+        ${ic ? `<button class="btn btn-small btn-ghost" data-icdel="${id}">지우기</button>` : ""}</span>
+      </div>`;
+    }).join("");
+  }
+  $("icList").innerHTML = html || `<div class="empty">해당하는 아이템이 없습니다.</div>`;
+  $("icList").querySelectorAll("[data-icup]").forEach((b) => b.onclick = () => { icTarget = b.dataset.icup; $("icFile").value = ""; $("icFile").click(); });
+  $("icList").querySelectorAll("[data-icdel]").forEach((b) => b.onclick = async () => {
+    if (!confirm(`「${ITEMS[b.dataset.icdel].name}」 그림을 지울까요?`)) return;
+    const { error } = await sb.from("item_icons").delete().eq("id", b.dataset.icdel);
+    if (error) toast("실패: " + error.message); else { toast("지웠습니다."); loadIcons(); }
+  });
+}
+$("icSearch").oninput = renderIcons;
+$("icMissing").onchange = renderIcons;
+
+// 그림을 정사각형 128x128로 맞춰(비율 유지, 남는 곳은 투명) 저장
+$("icFile").addEventListener("change", () => {
+  const f = $("icFile").files[0];
+  if (!f || !icTarget) return;
+  if (!/^image\//.test(f.type)) { toast("그림 파일만 올릴 수 있습니다."); return; }
+  if (f.size > 10 * 1024 * 1024) { toast("10MB보다 작은 그림을 골라주세요."); return; }
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = async () => {
+    const S = 128, cv = document.createElement("canvas");
+    cv.width = S; cv.height = S;
+    const c = cv.getContext("2d");
+    c.imageSmoothingQuality = "high";
+    const k = Math.min(S / img.width, S / img.height);
+    const w = img.width * k, h = img.height * k;
+    c.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+    URL.revokeObjectURL(url);
+    let data = cv.toDataURL("image/webp", 0.9);
+    if (!data.startsWith("data:image/webp")) data = cv.toDataURL("image/png");
+    if (data.length > 80000) data = cv.toDataURL("image/webp", 0.7);
+    const id = icTarget;
+    const { error } = await sb.from("item_icons").upsert({ id, img: data, updated_at: new Date().toISOString() });
+    if (error) { toast("저장 실패: " + error.message); return; }
+    toast(`「${ITEMS[id].name}」 그림을 저장했습니다.`);
+    loadIcons();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast("그림을 열 수 없습니다."); };
+  img.src = url;
+});
