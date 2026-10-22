@@ -86,15 +86,18 @@
           <div id="map" class="map"></div>
         </div>
         <p class="map-hint">인접한 칸을 누르거나 방향키(WASD)로 한 칸씩 이동 · 이동마다 행동력 1</p>
-        <div class="minimap-wrap">
-          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
-          <div id="minimap" class="minimap"></div>
-          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-camp"></i>기지·야영지</span><span><i class="lg lg-tower"></i>흑선탑 (소문)</span></div>
-        </div>
       </section>
 
       <section class="side-col">
+        <div class="panel minimap-panel">
+          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
+          <div id="minimap" class="minimap"></div>
+          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-view"></i>보이는 곳</span><span><i class="lg lg-camp"></i>기지·야영지</span><span><i class="lg lg-tower"></i>흑선탑 (소문)</span></div>
+        </div>
         <div class="panel" id="tilePanel"></div>
+      </section>
+
+      <section class="log-col">
         <div class="panel log-panel">
           <h3 class="panel-title">행적 <small>行跡</small></h3>
           <div id="log" class="log"></div>

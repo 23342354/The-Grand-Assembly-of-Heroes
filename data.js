@@ -6,7 +6,7 @@
 
 // ---------- 기본 수치 ----------
 const RULES = {
-  dailyAP: 24,          // 하루 행동력 (한국 시간 자정에 회복)
+  dailyAP: 50,          // 하루 행동력 (한국 시간 자정에 회복)
   moveCost: 1,          // 이동 1칸
   exploreCost: 1,       // 탐색 1회
   huntCost: 2,          // 토벌 1회
@@ -17,9 +17,9 @@ const RULES = {
 // ---------- 지도 (21 x 21) ----------
 // 한 글자가 한 칸입니다. 아래 TILES의 글자와 연결됩니다.
 // C = 임시 기지(시작점), E = 버려진 야영지(휴식 가능), X = 흑선탑
-// 화면에는 내 주변 9 x 9 칸만 보이고, 걸어가면 지도가 따라 움직입니다.
+// 화면에는 내 주변 5 x 5 칸만 보이고, 걸어가면 지도가 따라 움직입니다.
 const MAP_VERSION = 2;   // 지도를 크게 바꾸면 이 숫자를 1 올리세요 (모두 기지에서 다시 시작)
-const VIEW = 9;          // 화면에 보이는 칸 수 (홀수)
+const VIEW = 5;          // 화면에 보이는 칸 수 (홀수: 5, 7, 9 …)
 const MAP = [
   "PPPPPMMMMBBOOOOOOOPPP",
   "PPFFFMMMBBBOOOOOOOOPP",
@@ -85,7 +85,7 @@ const TILES = {
   M: {
     name: "독무 늪", hanja: "沼", danger: 3,
     desc: "누런 안개가 무릎 높이로 고여 있다. 발을 디딜 때마다 진흙이 신발을 놓아주지 않으려 한다. 숨을 깊이 들이쉬지 마라.",
-    drops: [["herb", 3], ["poison", 3], ["redling", 2], ["leech", 3]],
+    drops: [["herb", 3], ["poison", 3], ["redling", 2], ["leech", 3], ["cloudgrass", 1]],
     monsters: ["toad", "toad", "grunt"],
     events: [
       { type: "hp", amount: -12, text: "발밑의 진흙이 꺼지며 독기 서린 물이 튄다. 살갗이 타는 듯 따갑다." },
@@ -96,7 +96,7 @@ const TILES = {
   P: {
     name: "협곡 잔도", hanja: "棧", danger: 2,
     desc: "절벽에 박은 나무 말뚝 위로 판자 길이 이어진다. 판자 사이로 까마득한 아래가 보인다. 바람이 불 때마다 길 전체가 낮게 신음한다.",
-    drops: [["scrap", 3], ["hide", 3], ["meat", 2], ["fang", 2], ["blackiron", 1]],
+    drops: [["scrap", 3], ["hide", 3], ["meat", 2], ["fang", 2], ["blackiron", 1], ["cloudgrass", 1]],
     monsters: ["wolf", "archer"],
     events: [
       { type: "item", item: "blackiron", n: 1, text: "부러진 말뚝 사이에 걸린 검집 하나. 칼은 없고, 검집 끝에 박힌 쇳조각만 묵직하다. 흑철이다." },
@@ -117,7 +117,7 @@ const TILES = {
   T: {
     name: "무너진 사당", hanja: "祠", danger: 3,
     desc: "기둥 두 개만 남은 사당. 신상의 얼굴은 누군가 정으로 쪼아냈다. 바닥에 흩어진 부적들은 비에 젖어도 글씨가 번지지 않는다.",
-    drops: [["talisman", 4], ["cinnabar", 3], ["thread", 2], ["herb", 2]],
+    drops: [["talisman", 4], ["cinnabar", 3], ["thread", 2], ["herb", 2], ["cloudgrass", 1]],
     monsters: ["jiangshi", "jiangshi", "grunt"],
     events: [
       { type: "recipe", recipe: "ward_charm", text: "제단 밑 돌을 들추자 보리사 승려의 필체로 쓴 부적법이 나온다. — 비전 제작법 [진혼부]를 익혔다." },
@@ -178,6 +178,7 @@ const ITEMS = {
   fish:      { name: "흑수 잉어",   type: "mat", desc: "검은 강에서 자란 잉어. 살이 희다." },
   cinnabar:  { name: "주사",       type: "mat", desc: "부적을 쓰는 붉은 안료." },
   blackiron: { name: "흑철 조각",   type: "mat", desc: "흑선채가 쓰는 검은 쇠. 무겁고 단단하다.", rare: true },
+  cloudgrass:{ name: "운무초",     type: "mat", desc: "안개가 짙은 날에만 잎을 여는 풀. 늪, 잔도, 사당에서 아주 드물게 보인다.", rare: true },
   token:     { name: "흑선 신분패", type: "mat", desc: "검은 선이 그어진 나무패. 공적의 증표가 된다." },
 
   // 요리 (heal: HP 회복 / buff: 다음 토벌 1회 동안 능력치 상승)
@@ -187,7 +188,10 @@ const ITEMS = {
   jerky_spicy:{ name: "화초 육포",  type: "food", desc: "혀가 얼얼한 폐촌의 맛.", heal: 15, buff: { atk: 8, spd: 2 } },
   honey_cake:{ name: "꿀떡",       type: "food", desc: "달고 차져서 오래 든든하다.", heal: 25, buff: { spd: 4 } },
   red_pill:  { name: "혈영단",     type: "food", desc: "혈영지를 꿀에 개어 빚은 환.", heal: 999, buff: { def: 6 } },
-  antidote_pill:{ name: "청해환",  type: "food", desc: "독기를 씻어내는 푸른 환약.", heal: 50, buff: { def: 4, maxHp: 0 } },
+  antidote_pill:{ name: "청해환",  type: "food", desc: "독기를 씻어내는 푸른 환약.", heal: 50, buff: { def: 4 } },
+  // ap: 먹으면 행동력 회복 (하루 최대치를 넘지는 않음)
+  mist_tea:  { name: "운무차",     type: "food", desc: "운무초를 우린 쌉쌀한 차. 무거운 다리가 가벼워진다.", ap: 8 },
+  heaven_pill:{ name: "회천단",    type: "food", desc: "하늘을 되돌린다는 이름의 환약. 지친 몸에 하루치 기운을 다시 불어넣는다.", ap: 20, heal: 30 },
 
   // 장비 (slot: weapon/armor/charm)
   dagger:    { name: "철편 단검",   type: "gear", slot: "weapon", desc: "철편을 두들겨 펴 만든 투박한 칼.", stats: { atk: 4 } },
@@ -211,6 +215,8 @@ const RECIPES = {
   red_pill:     { station: "kitchen", need: { redling: 1, honey: 1, herb: 2 } },
   jerky_spicy:  { station: "kitchen", need: { meat: 2, salt: 1, herb: 2 }, hidden: true },
   antidote_pill:{ station: "kitchen", need: { leech: 1, herb: 2, poison: 1 }, hidden: true },
+  mist_tea:     { station: "kitchen", need: { cloudgrass: 1, herb: 2, honey: 1 } },
+  heaven_pill:  { station: "kitchen", need: { cloudgrass: 3, redling: 1, honey: 2 } },
 
   dagger:       { station: "forge", need: { scrap: 3, resin: 1 } },
   leather:      { station: "forge", need: { hide: 3, thread: 1 } },
@@ -241,13 +247,13 @@ const MONSTERS = {
               drops: [["thread", 0.5, 1], ["token", 0.5, 1], ["resin", 0.3, 1]],
               lines: ["검은 깃 화살을 날린다", "거리를 벌리며 연달아 시위를 당긴다"] },
   jiangshi: { name: "사당의 강시",   hp: 85,  atk: 14, def: 8,  spd: 3,  exp: 24, merit: 5,
-              drops: [["talisman", 0.6, 2], ["cinnabar", 0.4, 1]],
+              drops: [["talisman", 0.6, 2], ["cinnabar", 0.4, 1], ["cloudgrass", 0.08, 1]],
               lines: ["뻣뻣한 팔로 할퀸다", "썩은 숨을 내뿜으며 덮친다"] },
   captain:  { name: "흑선채 백부장", hp: 140, atk: 20, def: 9,  spd: 8,  exp: 45, merit: 12,
-              drops: [["blackiron", 0.8, 2], ["token", 0.9, 2]],
+              drops: [["blackiron", 0.8, 2], ["token", 0.9, 2], ["cloudgrass", 0.12, 1]],
               lines: ["흑철 대도를 휘둘러 바람을 가른다", "'선을 넘은 대가다!' 일갈과 함께 내려찍는다"] },
   warden:   { name: "흑선탑 수문장", hp: 620, atk: 40, def: 18, spd: 10,  exp: 200, merit: 80, boss: true,
-              drops: [["blackiron", 1, 4], ["token", 1, 5], ["redling", 0.7, 2]],
+              drops: [["blackiron", 1, 4], ["token", 1, 5], ["redling", 0.7, 2], ["cloudgrass", 1, 3]],
               lines: ["검은 실이 감긴 창으로 일대를 휩쓴다", "'이 문은 열리지 않는다.' 목소리가 땅을 울린다", "검은 연기를 토해 시야를 삼킨다"] },
 };
 
@@ -302,6 +308,7 @@ const QUEST_REWARDS = [
   { merit: 6, items: { talisman: 1, cinnabar: 1 } },
   { merit: 6, items: { fish: 2, salt: 2 } },
   { merit: 7, items: { redling: 1 } },
+  { merit: 6, items: { cloudgrass: 1 } },
   { merit: 7, items: { blackiron: 1 } },
 ];
 // 하루 개인 임무 3개를 모두 끝냈을 때 추가 보상

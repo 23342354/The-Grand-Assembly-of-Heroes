@@ -74,7 +74,7 @@ function newState(name) {
   return {
     name, lv: 1, exp: 0, hp: b.maxHp,
     base: { ...b },
-    ap: RULES.dailyAP, apDate: todayKST(),
+    ap: RULES.dailyAP, apDate: todayKST(), apCap: RULES.dailyAP,
     mapVer: MAP_VERSION,
     x: CAMP.x, y: CAMP.y,
     revealed: [key(CAMP.x, CAMP.y)],
@@ -94,6 +94,11 @@ function newState(name) {
 function migrate(s) {
   const base = newState(s.name || "무명");
   const m = { ...base, ...s, base: { ...base.base, ...(s.base || {}) }, equip: { ...base.equip, ...(s.equip || {}) } };
+  // 하루 행동력이 늘어났으면 오늘 몫도 바로 늘려준다
+  if ((m.apCap || 24) !== RULES.dailyAP) {
+    m.ap = Math.max(0, Math.min(RULES.dailyAP, m.ap + (RULES.dailyAP - (m.apCap || 24))));
+    m.apCap = RULES.dailyAP;
+  }
   if (m.mapVer !== MAP_VERSION) {
     // 지도가 바뀌었으면 위치와 밝힌 땅만 처음으로 (행낭, 경지, 공적은 그대로)
     m.mapVer = MAP_VERSION;
@@ -1071,6 +1076,7 @@ function updateDots() {
 function effText(it) {
   if (it.type === "food") {
     const parts = [];
+    if (it.ap) parts.push(`행동력 +${it.ap}`);
     if (it.heal) parts.push(it.heal >= 999 ? "기혈 전부 회복" : `기혈 +${it.heal}`);
     if (it.buff) parts.push(`다음 토벌: ${buffText(it.buff)}`);
     return parts.join(" · ");
@@ -1119,7 +1125,12 @@ function renderBag() {
 function useFood(id) {
   if (busy || !S.inv[id]) return;
   const it = ITEMS[id];
+  if (it.ap) {
+    checkDailyReset();
+    if (S.ap >= RULES.dailyAP) { toast("행동력이 이미 가득하다. 아껴 두자."); return; }
+  }
   removeItem(id);
+  if (it.ap) S.ap = Math.min(RULES.dailyAP, S.ap + it.ap);
   if (it.heal) S.hp = Math.min(stats().maxHp, S.hp + it.heal);
   if (it.buff) S.buff = { ...it.buff };
   log(`${it.name}을(를) 먹었다. ${effText(it)}`, "gain");

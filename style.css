@@ -230,10 +230,24 @@ input:focus, select:focus { border-color: var(--gold); }
 .bar-fill.ap { background: linear-gradient(90deg, var(--ap-dark), var(--ap)); }
 .top-actions { display: flex; gap: 8px; align-items: center; }
 
-/* ---------- 본문 배치 ---------- */
+/* ---------- 본문 배치 ----------
+   넓은 화면(1500px 이상): 지도 | 전도+지형 | 행적  — 1920×1080에서 스크롤 없이 한눈에
+   중간 화면: 지도 | 전도+지형 / 행적
+   휴대폰: 위에서 아래로 한 줄                                   */
+:root { --mapsize: min(560px, calc(100vh - 230px)); }
 .layout {
-  display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px;
-  padding: 18px 20px 0; max-width: 1240px; margin: 0 auto;
+  display: grid; gap: 16px; padding: 16px 20px 0; max-width: 1700px; margin: 0 auto;
+  grid-template-columns: auto minmax(0, 380px);
+  grid-template-areas: "map side" "map log";
+  justify-content: center; align-items: start;
+}
+.map-col { grid-area: map; }
+.side-col { grid-area: side; }
+.log-col { grid-area: log; min-width: 0; }
+@media (min-width: 1500px) {
+  .layout { grid-template-columns: auto 380px minmax(320px, 520px); grid-template-areas: "map side log"; }
+  .log-col, .log-col .log-panel { height: 100%; }
+  .log-col .log { max-height: calc(var(--mapsize) - 40px); }
 }
 .panel {
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -246,18 +260,19 @@ input:focus, select:focus { border-color: var(--gold); }
 }
 .panel-title small { color: var(--faint); font-size: 12px; margin-left: 4px; }
 .side-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.minimap-panel { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px; }
 
 /* ---------- 지도 ---------- */
 .map-frame {
   border: 1px solid var(--line); outline: 1px solid var(--line-soft); outline-offset: 4px;
   padding: 10px; background: var(--map-bg);
-  max-width: 600px; margin: 0 auto;
+  width: var(--mapsize); margin: 0 auto;
 }
 .map { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }
 .tile {
   aspect-ratio: 1; position: relative;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-title); font-size: clamp(15px, 3.2vw, 26px);
+  font-family: var(--font-title); font-size: calc(var(--mapsize) / 13);
   border: 1px solid rgba(128,128,128,.08);
   user-select: none; transition: filter .15s, transform .1s;
 }
@@ -298,19 +313,19 @@ input:focus, select:focus { border-color: var(--gold); }
 .map-hint { text-align: center; color: var(--faint); font-size: 12px; margin: 10px 0 0; }
 
 /* 전도(미니맵) */
-.minimap-wrap { max-width: 600px; margin: 14px auto 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .minimap-label { font-size: 13px; color: var(--dim); letter-spacing: .1em; }
 .minimap-label small { color: var(--faint); }
 .minimap-label span { margin-left: 6px; letter-spacing: 0; }
 .minimap { display: grid; gap: 1px; padding: 4px; background: var(--map-bg); border: 1px solid var(--line); }
 .mm { width: 8px; height: 8px; }
+.mm.view { outline: 1px solid rgba(200,163,90,.55); outline-offset: -1px; }
 .mm.fog { background: var(--fog-bg); }
-.mm.view { box-shadow: inset 0 0 0 9px rgba(200,163,90,.10); }
 .mm.here { background: var(--blood-hi) !important; box-shadow: 0 0 4px var(--blood-hi); }
 .mm.rumor { background: var(--blood); opacity: .7; }
 .minimap-legend { display: flex; gap: 12px; font-size: 11.5px; color: var(--faint); flex-wrap: wrap; justify-content: center; }
 .lg { display: inline-block; width: 8px; height: 8px; margin-right: 4px; vertical-align: middle; }
 .lg-here { background: var(--blood-hi); }
+.lg-view { outline: 1px solid var(--gold); outline-offset: -1px; }
 .lg-camp { background: var(--tC-fg); }
 .lg-tower { background: var(--blood); opacity: .7; }
 
@@ -330,8 +345,8 @@ input:focus, select:focus { border-color: var(--gold); }
 .buff-line { margin-top: 10px; font-size: 13px; color: var(--jade); }
 
 /* ---------- 행적(로그) ---------- */
-.log-panel { flex: 1; display: flex; flex-direction: column; min-height: 260px; }
-.log { flex: 1; overflow-y: auto; max-height: 360px; padding-right: 6px; font-size: 14px; }
+.log-panel { display: flex; flex-direction: column; min-height: 220px; }
+.log { flex: 1; overflow-y: auto; max-height: 300px; padding-right: 6px; font-size: 14px; }
 .log p { margin: 0 0 7px; padding-left: 10px; border-left: 2px solid transparent; animation: inkIn .35s ease-out; }
 @keyframes inkIn { from { opacity: 0; filter: blur(2px); } to { opacity: 1; filter: none; } }
 .log .story { color: var(--text-story); border-left-color: var(--line); }
@@ -344,7 +359,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .log::-webkit-scrollbar-thumb, .battle-log::-webkit-scrollbar-thumb { background: var(--line); }
 
 /* ---------- 하단 탭 ---------- */
-.tabs { display: flex; max-width: 1240px; margin: 18px auto 0; padding: 0 20px; }
+.tabs { display: flex; max-width: 1552px; margin: 16px auto 0; padding: 0 20px; }
 .tab {
   flex: 1; background: var(--panel); border: 1px solid var(--line); border-bottom: none;
   color: var(--dim); padding: 10px 6px; cursor: pointer; font-size: 15px; letter-spacing: .1em;
@@ -354,7 +369,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .tab small { font-size: 11px; color: var(--faint); }
 .tab.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 2px 0 var(--blood-hi); }
 .tab-dot { position: absolute; top: 8px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--blood-hi); }
-.tab-panel { max-width: 1200px; margin: 0 auto 40px; width: calc(100% - 40px); border-top: none; min-height: 200px; }
+.tab-panel { max-width: 1512px; margin: 0 auto 40px; width: calc(100% - 40px); border-top: none; min-height: 200px; }
 
 .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .card {
@@ -482,7 +497,8 @@ body.has-update .topbar { top: var(--ub, 46px); }
 
 /* ---------- 모바일 ---------- */
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; padding: 12px 12px 0; }
+  :root { --mapsize: min(calc(100vw - 24px - 22px), 560px); }
+  .layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "map" "side" "log"; padding: 12px 12px 0; }
   .topbar { padding: 8px 12px; gap: 8px; }
   .stats { gap: 10px; }
   .bar { width: 64px; }
