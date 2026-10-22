@@ -5,12 +5,12 @@
 
 const CONFIG = {
   // Supabase > Project Settings > API(또는 Data API) 에 있는 Project URL
-  SUPABASE_URL: "",
+  SUPABASE_URL: "rAOO93pl0vv4DAGf",
 
   // Supabase > Project Settings > API Keys 에 있는
   // "publishable" 키(sb_publishable_...) 또는 "anon public" 키
   // ※ 이 키는 공개되어도 괜찮은 키입니다. secret / service_role 키는 절대 넣지 마세요!
-  SUPABASE_KEY: "",
+  SUPABASE_KEY: "sb_publishable_oLSWhiGgQXPGMU7WqMspSg_K0m6Wyr7",
 
   // 아이디 로그인을 위한 내부용 이메일 주소 꼬리표.
   // 회원가입 시 "아이디@이 값" 형태로 저장됩니다. 실제로 메일이 가지는 않습니다.
