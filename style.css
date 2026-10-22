@@ -45,7 +45,7 @@
 
   /* 배경 장식(찢긴 종이) 색 */
   --tear-1: #1a3358; --tear-2: #24467a; --tear-3: #345d97; --tear-4: #142844;
-  --sun: #b8362c; --grain: rgba(160, 190, 240, 0.05); --decor-opacity: .55;
+  --sun: #b8362c; --grain: transparent; --decor-opacity: .55;
 
   --fog-bg: #0f1828;  --fog-fg: #26354f;
   --tC-bg: #2f2a1c;   --tC-fg: #e6c27a;
@@ -105,7 +105,7 @@
   --seal: #c8392f;
 
   --tear-1: #2a4a7c; --tear-2: #4d74ad; --tear-3: #8fa9cf; --tear-4: #1d355f;
-  --sun: #c8392f; --grain: rgba(80, 70, 50, 0.09); --decor-opacity: 1;
+  --sun: #c8392f; --grain: transparent; --decor-opacity: 1;
 
   --fog-bg: #e2ddd0;  --fog-fg: #bbb5a6;
   --tC-bg: #ecdcb6;   --tC-fg: #7a5512;
@@ -649,6 +649,14 @@ body.has-update .topbar { top: var(--ub, 46px); }
 .d-moon { position: absolute; z-index: 1; right: 2vw; top: 8vh; width: 26px; height: 26px; border-radius: 50%; box-shadow: -7px 5px 0 0 #c9a356; }
 .d-grain { position: absolute; inset: 0; background-image: radial-gradient(var(--grain) 1px, transparent 1.2px); background-size: 4px 4px; }
 .d-tear { filter: drop-shadow(1px 0 0 rgba(255,255,255,.18)); }
+
+/* 한지 결: hanji.png를 모든 화면 위에 "곱하기"로 겹친다 (색은 그대로, 섬유 결만 보임) */
+.paper {
+  position: fixed; inset: 0; z-index: 100; pointer-events: none;
+  background: url("hanji.png") repeat; background-size: 540px 360px;
+  mix-blend-mode: multiply; opacity: .7;   /* 결이 너무 진하면 숫자를 낮추세요 (0~1) */
+}
+:root[data-theme="dark"] .paper { filter: invert(1); mix-blend-mode: screen; opacity: .35; }
 
 /* 패널에 한지 결 */
 .panel, .auth-box, .modal-box, .tab {
