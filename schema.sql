@@ -16,6 +16,13 @@ create table if not exists public.players (
 
 create index if not exists players_merit_idx on public.players (merit desc);
 
+-- 두상(100x100 그림)과 프로필(소속, 한마디, 두상 출처)
+alter table public.players add column if not exists avatar text;
+alter table public.players add column if not exists profile jsonb not null default '{}'::jsonb;
+alter table public.players drop constraint if exists players_avatar_size;
+alter table public.players add constraint players_avatar_size
+  check (avatar is null or (avatar like 'data:image/%' and length(avatar) <= 150000));
+
 -- 보안 규칙(RLS): 남의 기록은 볼 수만 있고, 내 기록만 만들고 고칠 수 있다
 alter table public.players enable row level security;
 
