@@ -317,6 +317,27 @@ button { font-family: inherit; }
 .battle-log .loot { color: var(--jade); }
 .battle-foot { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
 
+/* ---------- 새 버전 알림 띠 ---------- */
+.update-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 90;
+  min-height: 46px; padding: 8px 48px 8px 16px;
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  background: linear-gradient(90deg, #3a0f0c, #5c1712 50%, #3a0f0c);
+  border-bottom: 1px solid var(--blood-hi);
+  box-shadow: 0 4px 18px rgba(0,0,0,.6);
+  font-size: 14px; text-align: center;
+  animation: barIn .4s ease-out;
+}
+@keyframes barIn { from { transform: translateY(-100%); } to { transform: none; } }
+.update-text b { color: #f3d79a; font-weight: 700; margin-right: 4px; }
+.update-close {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--dim); font-size: 22px; cursor: pointer; padding: 4px 8px;
+}
+.update-close:hover { color: var(--bone); }
+body.has-update { padding-top: var(--ub, 46px); }
+body.has-update .topbar { top: var(--ub, 46px); }
+
 /* ---------- 알림 ---------- */
 .toast {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);

@@ -1001,3 +1001,60 @@ function renderChat() {
 window.addEventListener("beforeunload", () => { if (S && mode === "local") saveNow(); });
 // 자정을 넘겨 켜둔 경우 대비
 setInterval(() => { if (S) { checkDailyReset(); renderHeader(); renderTile(); } }, 60000);
+
+// ============================================================
+//  새 버전 알림 — GitHub에 파일을 새로 올리면 접속 중인 사람 화면 위에 띠가 뜬다
+//  (파일의 수정 표시를 3분마다, 그리고 창으로 돌아올 때마다 확인)
+// ============================================================
+const WATCH_FILES = ["index.html", "style.css", "game.js", "data.js", "config.js"];
+let firstSig = null;
+
+async function siteSignature() {
+  const parts = await Promise.all(WATCH_FILES.map(async (f) => {
+    const r = await fetch(f, { method: "HEAD", cache: "no-store" });
+    if (!r.ok) return "";
+    return (r.headers.get("etag") || "") + (r.headers.get("last-modified") || "");
+  }));
+  return parts.join("|");
+}
+
+async function checkUpdate() {
+  if (location.protocol === "file:") return;           // 내 컴퓨터에서 파일로 열었을 땐 확인 안 함
+  try {
+    const sig = await siteSignature();
+    if (!sig.replace(/\|/g, "")) return;               // 서버가 수정 표시를 안 주면 기능 끔
+    if (firstSig === null) { firstSig = sig; return; }
+    if (sig !== firstSig) showUpdateBar();
+  } catch (e) { /* 인터넷이 잠깐 끊긴 경우 등은 무시 */ }
+}
+
+function showUpdateBar() {
+  $("updateBar").classList.remove("hidden");
+  document.body.classList.add("has-update");
+  fitUpdateBar();
+}
+// 휴대폰처럼 띠가 두 줄 이상이 될 때 화면이 가려지지 않도록 띠 높이만큼 내려준다
+function fitUpdateBar() {
+  if ($("updateBar").classList.contains("hidden")) return;
+  document.body.style.setProperty("--ub", $("updateBar").offsetHeight + "px");
+}
+window.addEventListener("resize", fitUpdateBar);
+
+$("updateReload").addEventListener("click", async () => {
+  $("updateReload").disabled = true;
+  $("updateReload").textContent = "불러오는 중…";
+  try { await saveNow(); } catch (e) {}
+  // 브라우저에 남은 옛 파일을 새 파일로 갈아끼운 뒤 새로고침
+  try { await Promise.all(WATCH_FILES.map((f) => fetch(f, { cache: "reload" }))); } catch (e) {}
+  location.reload();
+});
+$("updateClose").addEventListener("click", () => {
+  $("updateBar").classList.add("hidden");
+  document.body.classList.remove("has-update");
+  firstSig = null;   // 닫으면 다음 갱신 때 다시 알림
+  checkUpdate();
+});
+
+checkUpdate();
+setInterval(checkUpdate, 3 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(); });
