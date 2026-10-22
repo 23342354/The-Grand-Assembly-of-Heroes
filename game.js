@@ -50,6 +50,7 @@ let mode = "local";      // "online" | "local"
 let currentTab = "bag";
 let busy = false;        // 전투 연출 중 입력 막기
 let mapWasReset = false;
+let myAvatar = null;     // 내 두상 그림 (100x100, data URL)
 
 const ONLINE_READY = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_KEY && window.supabase);
 if (ONLINE_READY) {
@@ -86,6 +87,7 @@ function newState(name) {
     merit: 0, kills: 0, wardenKills: 0,
     daily: null, commune: null,
     giftLog: [], sentLog: [],
+    profile: { aff: "", intro: "", credit: "" },
     created: Date.now(),
   };
 }
@@ -93,7 +95,7 @@ function newState(name) {
 // 예전 저장 데이터에 새 항목이 없을 때 채워 넣기
 function migrate(s) {
   const base = newState(s.name || "무명");
-  const m = { ...base, ...s, base: { ...base.base, ...(s.base || {}) }, equip: { ...base.equip, ...(s.equip || {}) } };
+  const m = { ...base, ...s, base: { ...base.base, ...(s.base || {}) }, equip: { ...base.equip, ...(s.equip || {}) }, profile: { ...base.profile, ...(s.profile || {}) } };
   // 하루 행동력이 늘어났으면 오늘 몫도 바로 늘려준다
   if ((m.apCap || 24) !== RULES.dailyAP) {
     m.ap = Math.max(0, Math.min(RULES.dailyAP, m.ap + (RULES.dailyAP - (m.apCap || 24))));
@@ -227,7 +229,7 @@ function translateAuthError(m) {
 }
 
 async function loadOnline() {
-  const { data, error } = await sb.from("players").select("state, nickname").eq("id", uid).maybeSingle();
+  const { data, error } = await sb.from("players").select("state, nickname, avatar, profile").eq("id", uid).maybeSingle();
   if (error) { authMsg("기록을 불러오지 못했습니다: " + error.message); return; }
   if (!data) {
     // 가입 도중 끊긴 경우: 이름을 다시 받아 새로 만든다
@@ -239,6 +241,9 @@ async function loadOnline() {
     mode = "online"; enterGame(true); return;
   }
   S = migrate(data.state);
+  S.name = data.nickname || S.name;
+  myAvatar = data.avatar || null;
+  if (data.profile && Object.keys(data.profile).length) S.profile = { ...S.profile, ...data.profile };
   mode = "online";
   enterGame(false);
 }
@@ -246,6 +251,7 @@ async function loadOnline() {
 $("localBtn").addEventListener("click", () => {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem("heukseon_local")); } catch (e) {}
+  try { myAvatar = localStorage.getItem("heukseon_local_avatar"); } catch (e) {}
   if (saved) { S = migrate(saved); mode = "local"; enterGame(false); return; }
   const nick = prompt("강호에서 쓸 이름을 정해주세요 (최대 12자)", "무명객");
   if (!nick) return;
@@ -257,7 +263,7 @@ $("localBtn").addEventListener("click", () => {
 $("logoutBtn").addEventListener("click", async () => {
   await saveNow();
   if (mode === "online") await sb.auth.signOut();
-  S = null; uid = null;
+  S = null; uid = null; myAvatar = null; playerList = null;
   $("log").innerHTML = "";
   $("gameScreen").classList.add("hidden");
   $("authScreen").classList.remove("hidden");
@@ -293,13 +299,21 @@ function renderAll() { renderHeader(); renderMap(); renderTile(); renderTab(); u
 
 function renderHeader() {
   const st = stats();
-  $("hdrName").textContent = S.name + (mode === "local" ? " (체험)" : "");
-  $("hdrLv").textContent = S.lv + "성";
+  $("hdrAvatar").innerHTML = avatarInner(myAvatar, S.name);
+  $("hdrName").textContent = S.name;
+  $("hdrSub").textContent = `${S.profile.aff || "무소속"} · 경지 ${S.lv}성${mode === "local" ? " · 체험" : ""}`;
   $("hdrHp").textContent = `${S.hp}/${st.maxHp}`;
   $("hdrHpBar").style.width = Math.max(0, (S.hp / st.maxHp) * 100) + "%";
   $("hdrAp").textContent = `${S.ap}/${RULES.dailyAP}`;
   $("hdrApBar").style.width = (S.ap / RULES.dailyAP) * 100 + "%";
+  $("hdrExp").textContent = `${S.exp}/${expToNext(S.lv)}`;
+  const bs = battleStats();
+  const plus = (k) => (S.buff && S.buff[k] ? ` (+${S.buff[k]})` : "");
+  $("hdrAtk").textContent = st.atk + plus("atk");
+  $("hdrDef").textContent = st.def + plus("def");
+  $("hdrSpd").textContent = st.spd + plus("spd");
   $("hdrMerit").textContent = S.merit;
+  $("hdrKills").textContent = S.kills;
 }
 
 function isNear(x, y) { return Math.abs(x - S.x) + Math.abs(y - S.y) === 1; }
@@ -362,7 +376,7 @@ $("map").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (!S || busy || $("gameScreen").classList.contains("hidden")) return;
+  if (!S || busy || $("gameScreen").classList.contains("hidden") || !$("profileModal").classList.contains("hidden")) return;
   if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
   const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] }[e.key];
   if (!d) return;
@@ -1108,12 +1122,6 @@ function renderBag() {
   const sec = (label, arr) => `<div class="section-label">${label}</div>` + (arr.length ? `<div class="grid-list">${arr.map(cardOf).join("")}</div>` : `<div class="empty">없음</div>`);
 
   $("tabPanel").innerHTML = `
-    <div class="stat-sheet">
-      <span>경지 <b>${S.lv}성</b> (수련 ${S.exp}/${expToNext(S.lv)})</span>
-      <span>기혈 <b>${S.hp}/${st.maxHp}</b></span>
-      <span>공격 <b>${st.atk}</b></span><span>방어 <b>${st.def}</b></span><span>신법 <b>${st.spd}</b></span>
-      <span>토벌 <b>${S.kills}</b>회</span>
-    </div>
     <div class="section-label">착용</div><div class="equip-row">${equipHtml}</div>
     ${sec("요리", groups.food)}${sec("장비", groups.gear)}${sec("재료", groups.mat)}`;
 
@@ -1196,11 +1204,229 @@ async function renderRank() {
     return;
   }
   $("tabPanel").innerHTML = `<div class="empty">전공록을 펼치는 중…</div>`;
-  const { data, error } = await sb.from("players").select("id, nickname, merit, level").order("merit", { ascending: false }).limit(30);
+  const { data, error } = await sb.from("players").select("id, nickname, merit, level, avatar, profile").order("merit", { ascending: false }).limit(30);
   if (currentTab !== "rank") return;
   if (error) { $("tabPanel").innerHTML = `<div class="notice">불러오기 실패: ${esc(error.message)}</div>`; return; }
-  const rows = data.map((p, i) => `<tr class="${p.id === uid ? "me" : ""}"><td class="rank-num">${i + 1}</td><td>${esc(p.nickname)}</td><td>${p.level}성</td><td>${p.merit}</td></tr>`).join("");
-  $("tabPanel").innerHTML = `<table class="rank-table"><thead><tr><th>순위</th><th>이름</th><th>경지</th><th>공적</th></tr></thead><tbody>${rows}</tbody></table>`;
+  rankRows = data;
+  const rows = data.map((p, i) => `<tr class="clickable ${p.id === uid ? "me" : ""}" data-rank="${i}"><td class="rank-num">${i + 1}</td>
+    <td><span class="rank-who">${avatarHtml(p.avatar, p.nickname, "sm")}<span>${esc(p.nickname)}${p.profile && p.profile.aff ? `<br><span class="rank-aff">${esc(p.profile.aff)}</span>` : ""}</span></span></td>
+    <td>${p.level}성</td><td>${p.merit}</td></tr>`).join("");
+  $("tabPanel").innerHTML = `<table class="rank-table"><thead><tr><th>순위</th><th>이름</th><th>경지</th><th>공적</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="empty">이름을 누르면 그 협객의 정보를 볼 수 있다.</div>`;
+  $("tabPanel").querySelectorAll("[data-rank]").forEach((tr) => tr.onclick = () => {
+    const p = rankRows[+tr.dataset.rank];
+    if (p.id === uid) openProfile(); else openProfile(p);
+  });
+}
+
+
+// ============================================================
+//  두상 / 내 정보(프로필)
+// ============================================================
+let rankRows = [];
+const AVATAR_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const PF_LIMIT = { aff: 20, intro: 80, credit: 60, name: 12 };
+
+function avatarInner(src, name) {
+  if (src && AVATAR_RE.test(src)) return `<img src="${src}" alt="">`;
+  return esc((name || "?").slice(0, 1));
+}
+function avatarHtml(src, name, size) {
+  return `<span class="avatar avatar-${size}">${avatarInner(src, name)}</span>`;
+}
+
+const pf = { mode: "mine", tab: "view", other: null, draft: null, crop: null };
+
+function openProfile(other) {
+  pf.mode = other ? "other" : "mine";
+  pf.other = other || null;
+  pf.tab = "view";
+  pf.crop = null;
+  pf.draft = { avatar: myAvatar, ...S.profile };
+  $("pfTabs").classList.toggle("hidden", !!other);
+  $("profileModal").classList.remove("hidden");
+  renderProfile();
+}
+function closeProfile() { $("profileModal").classList.add("hidden"); pf.crop = null; }
+
+$("profileBtn").onclick = () => openProfile();
+$("profileBtn2").onclick = () => openProfile();
+$("pfClose").onclick = closeProfile;
+$("profileModal").addEventListener("click", (e) => { if (e.target.id === "profileModal") closeProfile(); });
+document.querySelectorAll(".pf-tab").forEach((b) => b.onclick = () => { pf.tab = b.dataset.pf; renderProfile(); });
+
+function profileCardHtml(p) {
+  const prof = p.profile || {};
+  const stats = p.mine
+    ? `<div class="pf-stats">
+        <div class="pf-stat"><span>공적</span><b>${p.merit}</b></div>
+        <div class="pf-stat"><span>토벌</span><b>${S.kills}</b></div>
+        <div class="pf-stat"><span>수문장 격파</span><b>${S.wardenKills}</b></div>
+        <div class="pf-stat"><span>밝힌 땅</span><b>${S.revealed.length}</b></div>
+      </div>`
+    : `<div class="pf-stats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="pf-stat"><span>경지</span><b>${p.level}성</b></div>
+        <div class="pf-stat"><span>공적</span><b>${p.merit}</b></div>
+      </div>`;
+  return `<div class="pf-card">
+      ${avatarHtml(p.avatar, p.name, "lg")}
+      <div class="pf-card-main">
+        <div class="pf-card-name">${esc(p.name)}</div>
+        <div class="pf-card-sub">${esc(prof.aff || "무소속")} · 경지 ${p.level}성</div>
+        <div class="pf-card-intro">${prof.intro ? esc(prof.intro) : `<span class="pf-help">아직 남긴 한마디가 없다.</span>`}</div>
+      </div>
+    </div>
+    ${stats}
+    ${prof.credit ? `<div class="pf-credit">두상 출처: ${esc(prof.credit)}</div>` : ""}`;
+}
+
+function renderProfile() {
+  document.querySelectorAll(".pf-tab").forEach((b) => b.classList.toggle("active", b.dataset.pf === pf.tab));
+  if (pf.mode === "other") {
+    const o = pf.other;
+    $("pfTitle").textContent = "협객 정보";
+    $("pfSub").textContent = o.nickname;
+    $("pfBody").innerHTML = profileCardHtml({ name: o.nickname, avatar: o.avatar, profile: o.profile, level: o.level, merit: o.merit });
+    return;
+  }
+  $("pfTitle").textContent = "내 정보";
+  $("pfSub").textContent = `${S.name} · ${S.profile.aff || "무소속"}${mode === "local" ? " · 체험 모드" : ""}`;
+  if (pf.tab === "view") {
+    $("pfBody").innerHTML = profileCardHtml({ mine: true, name: S.name, avatar: myAvatar, profile: S.profile, level: S.lv, merit: S.merit })
+      + `<div class="pf-foot"><button class="btn btn-small" id="pfGoEdit">편집하기</button></div>`;
+    $("pfGoEdit").onclick = () => { pf.tab = "edit"; renderProfile(); };
+    return;
+  }
+  const d = pf.draft;
+  $("pfBody").innerHTML = `
+    <div id="cropBox"></div>
+    <div class="pf-row">
+      ${avatarHtml(d.avatar, S.name, "lg")}
+      <div class="pf-row-body">
+        <div class="pf-inline"><button class="btn btn-small" id="pfPick">그림 고르기</button><button class="btn btn-small btn-ghost" id="pfClear" ${d.avatar ? "" : "disabled"}>그림 지우기</button></div>
+        <div class="pf-help">그림을 고르면 끌어서 옮기고 확대해 두상으로 쓸 부분을 정할 수 있다. 배경이 투명한 PNG는 투명한 그대로 쓰인다. 100×100 크기로 줄여서 저장된다.</div>
+      </div>
+    </div>
+    <label class="pf-field">두상 출처 <small>(선택 · ${PF_LIMIT.credit}자)</small><input id="pfCredit" maxlength="${PF_LIMIT.credit}" value="${esc(d.credit || "")}" placeholder="예: @그린사람 / 픽크루 이름"></label>
+    <label class="pf-field">소속 <small>(${PF_LIMIT.aff}자 · 이름 아래에 표시)</small><input id="pfAff" maxlength="${PF_LIMIT.aff}" value="${esc(d.aff || "")}" placeholder="예: 수경검문 / 떠돌이 낭인"></label>
+    <label class="pf-field">한마디 <small>(${PF_LIMIT.intro}자)</small><textarea id="pfIntro" rows="2" maxlength="${PF_LIMIT.intro}" placeholder="다른 협객에게 보일 한마디">${esc(d.intro || "")}</textarea></label>
+    <div class="pf-foot"><button class="btn btn-ghost" id="pfCancel">되돌리기</button><button class="btn btn-main" id="pfSave">저장</button></div>
+    <div class="section-label">강호 이름</div>
+    <div class="pf-inline"><input id="pfName" maxlength="${PF_LIMIT.name}" value="${esc(S.name)}"><button class="btn btn-small" id="pfRename">이름 바꾸기</button></div>
+    <div class="pf-help" style="margin-top:6px">다른 협객과 같은 이름은 쓸 수 없다. 이미 보낸 꾸러미에는 예전 이름이 남는다.</div>`;
+  const keep = () => { d.credit = $("pfCredit").value; d.aff = $("pfAff").value; d.intro = $("pfIntro").value; };
+  $("pfPick").onclick = () => { keep(); $("pfFile").value = ""; $("pfFile").click(); };
+  $("pfClear").onclick = () => { keep(); d.avatar = null; renderProfile(); };
+  $("pfCancel").onclick = () => { pf.draft = { avatar: myAvatar, ...S.profile }; pf.crop = null; renderProfile(); };
+  $("pfSave").onclick = () => { keep(); saveProfile(); };
+  $("pfRename").onclick = renameMe;
+  if (pf.crop) renderCropper();
+}
+
+// ---------- 그림 자르기 ----------
+$("pfFile").addEventListener("change", () => {
+  const f = $("pfFile").files[0];
+  if (!f) return;
+  if (!/^image\//.test(f.type)) { toast("그림 파일만 고를 수 있다."); return; }
+  if (f.size > 15 * 1024 * 1024) { toast("15MB보다 작은 그림을 골라주세요."); return; }
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    const cover = Math.max(240 / img.width, 240 / img.height);
+    pf.crop = { img, url, cover, zoom: 1, ox: 0, oy: 0 };
+    renderProfile();
+  };
+  img.onerror = () => { toast("그림을 열 수 없다."); URL.revokeObjectURL(url); };
+  img.src = url;
+});
+
+function renderCropper() {
+  $("cropBox").innerHTML = `<div class="cropper">
+      <div class="crop-stage" id="cropStage"><canvas id="cropCanvas" width="480" height="480"></canvas></div>
+      <div class="crop-zoom">작게<input type="range" id="cropZoom" min="1" max="4" step="0.01" value="${pf.crop.zoom}">크게</div>
+      <div class="pf-help">끌어서 위치를 옮기고, 막대(또는 마우스 휠)로 크기를 맞춘다.</div>
+      <div class="pf-inline"><button class="btn btn-small btn-ghost" id="cropCancel">취소</button><button class="btn btn-small btn-main" id="cropOk">이대로 쓰기</button></div>
+    </div>`;
+  const c = pf.crop, cv = $("cropCanvas"), ctx = cv.getContext("2d");
+  const clampOffset = () => {
+    const s = c.cover * c.zoom, w = c.img.width * s, h = c.img.height * s;
+    c.ox = clamp(c.ox, -(w - 240) / 2, (w - 240) / 2);
+    c.oy = clamp(c.oy, -(h - 240) / 2, (h - 240) / 2);
+  };
+  const draw = () => {
+    clampOffset();
+    const s = c.cover * c.zoom;
+    ctx.clearRect(0, 0, 480, 480);
+    ctx.save(); ctx.scale(2, 2);
+    ctx.drawImage(c.img, 120 + c.ox - (c.img.width * s) / 2, 120 + c.oy - (c.img.height * s) / 2, c.img.width * s, c.img.height * s);
+    ctx.restore();
+  };
+  draw();
+  let drag = null;
+  const stage = $("cropStage");
+  stage.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, ox: c.ox, oy: c.oy }; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointermove", (e) => { if (!drag) return; c.ox = drag.ox + e.clientX - drag.x; c.oy = drag.oy + e.clientY - drag.y; draw(); });
+  stage.addEventListener("pointerup", () => { drag = null; });
+  stage.addEventListener("wheel", (e) => { e.preventDefault(); c.zoom = clamp(c.zoom * (e.deltaY < 0 ? 1.08 : 0.93), 1, 4); $("cropZoom").value = c.zoom; draw(); }, { passive: false });
+  $("cropZoom").oninput = () => { c.zoom = +$("cropZoom").value; draw(); };
+  $("cropCancel").onclick = () => { URL.revokeObjectURL(c.url); pf.crop = null; renderProfile(); };
+  $("cropOk").onclick = () => {
+    const out = document.createElement("canvas");
+    out.width = 100; out.height = 100;
+    const o = out.getContext("2d");
+    const s = c.cover * c.zoom * (100 / 240);
+    o.drawImage(c.img, 50 + c.ox * (100 / 240) - (c.img.width * s) / 2, 50 + c.oy * (100 / 240) - (c.img.height * s) / 2, c.img.width * s, c.img.height * s);
+    let data = out.toDataURL("image/webp", 0.9);
+    if (!data.startsWith("data:image/webp")) data = out.toDataURL("image/png");
+    URL.revokeObjectURL(c.url);
+    pf.draft.avatar = data;
+    pf.crop = null;
+    renderProfile();
+    toast("두상을 정했다. 아래 저장을 눌러야 반영된다.");
+  };
+}
+
+async function saveProfile() {
+  const d = pf.draft;
+  const profile = {
+    aff: (d.aff || "").trim().slice(0, PF_LIMIT.aff),
+    intro: (d.intro || "").trim().slice(0, PF_LIMIT.intro),
+    credit: (d.credit || "").trim().slice(0, PF_LIMIT.credit),
+  };
+  const avatar = d.avatar && AVATAR_RE.test(d.avatar) ? d.avatar : null;
+  $("pfSave").disabled = true;
+  if (mode === "online") {
+    const { error } = await sb.from("players").update({ avatar, profile }).eq("id", uid);
+    if (error) { $("pfSave").disabled = false; toast("저장 실패: " + error.message); return; }
+  } else {
+    try { avatar ? localStorage.setItem("heukseon_local_avatar", avatar) : localStorage.removeItem("heukseon_local_avatar"); } catch (e) {}
+  }
+  myAvatar = avatar;
+  S.profile = profile;
+  pf.draft = { avatar, ...profile };
+  save(); renderHeader();
+  toast("내 정보를 저장했다.");
+  pf.tab = "view"; renderProfile();
+}
+
+async function renameMe() {
+  const name = $("pfName").value.trim();
+  if (!name || name.length > PF_LIMIT.name) { toast(`이름은 1~${PF_LIMIT.name}자로 정하라.`); return; }
+  if (name === S.name) { toast("지금과 같은 이름이다."); return; }
+  if (!confirm(`강호 이름을 「${name}」(으)로 바꿀까요?`)) return;
+  if (mode === "online") {
+    const { data: taken } = await sb.from("players").select("id").eq("nickname", name).maybeSingle();
+    if (taken) { toast("이미 강호에 같은 이름이 있다."); return; }
+    const { error } = await sb.from("players").update({ nickname: name }).eq("id", uid);
+    if (error) { toast(/duplicate|unique/i.test(error.message) ? "이미 강호에 같은 이름이 있다." : "바꾸지 못했다: " + error.message); return; }
+  }
+  const old = S.name;
+  S.name = name;
+  playerList = null;
+  log(`이제부터 「${esc(name)}」(이)라 불린다. (옛 이름: ${esc(old)})`, "sys");
+  await saveNow();
+  renderAll(); renderProfile();
+  toast("이름을 바꿨다.");
 }
 
 // ============================================================
