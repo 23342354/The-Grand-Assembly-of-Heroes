@@ -4,6 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>흑선행 黑線行</title>
+  <script>
+    // 화면 테마: 저장된 선택 > 기기 설정 순서로 정함 (깜빡임 방지를 위해 맨 먼저 실행)
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("heukseon_theme"); } catch (e) {}
+      if (t !== "light" && t !== "dark") t = (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Song+Myung&display=swap" rel="stylesheet">
@@ -20,6 +29,7 @@
 
   <!-- ===================== 입문(로그인) 화면 ===================== -->
   <div id="authScreen" class="screen">
+    <button class="theme-btn theme-btn-float" data-theme-toggle title="밝은/어두운 화면 전환"></button>
     <div class="auth-box">
       <div class="auth-seal"><span>黑</span><span>線</span></div>
       <h1 class="auth-title">흑선행</h1>
@@ -41,7 +51,7 @@
 
       <div class="auth-divider"><span>또는</span></div>
       <button id="localBtn" class="btn btn-ghost">체험 모드로 들어가기</button>
-      <p class="auth-note">체험 모드는 이 기기에만 기록되며, 동행(파티)과 전공록을 쓸 수 없습니다.</p>
+      <p class="auth-note">체험 모드는 이 기기에만 기록되며, 교환·공동 임무·전공록을 쓸 수 없습니다.</p>
     </div>
   </div>
 
@@ -64,7 +74,10 @@
         </div>
         <div class="stat"><span class="stat-label">공적</span><span id="hdrMerit">0</span></div>
       </div>
-      <button id="logoutBtn" class="btn btn-small btn-ghost">떠나기</button>
+      <div class="top-actions">
+        <button class="theme-btn" data-theme-toggle title="밝은/어두운 화면 전환"></button>
+        <button id="logoutBtn" class="btn btn-small btn-ghost">떠나기</button>
+      </div>
     </header>
 
     <main class="layout">
@@ -73,6 +86,11 @@
           <div id="map" class="map"></div>
         </div>
         <p class="map-hint">인접한 칸을 누르거나 방향키(WASD)로 한 칸씩 이동 · 이동마다 행동력 1</p>
+        <div class="minimap-wrap">
+          <div class="minimap-label">전도 <small>全圖</small> <span id="mmCoord"></span></div>
+          <div id="minimap" class="minimap"></div>
+          <div class="minimap-legend"><span><i class="lg lg-here"></i>나</span><span><i class="lg lg-camp"></i>기지·야영지</span><span><i class="lg lg-tower"></i>흑선탑 (소문)</span></div>
+        </div>
       </section>
 
       <section class="side-col">
@@ -87,7 +105,8 @@
     <nav class="tabs">
       <button class="tab active" data-tab="bag">행낭 <small>行囊</small></button>
       <button class="tab" data-tab="craft">공방 <small>工房</small></button>
-      <button class="tab" data-tab="party">동행 <small>同行</small></button>
+      <button class="tab" data-tab="quest">임무 <small>任務</small><span class="tab-dot hidden" id="questDot"></span></button>
+      <button class="tab" data-tab="trade">교환 <small>交換</small><span class="tab-dot hidden" id="tradeDot"></span></button>
       <button class="tab" data-tab="rank">전공록 <small>戰功錄</small></button>
     </nav>
     <section class="panel tab-panel" id="tabPanel"></section>

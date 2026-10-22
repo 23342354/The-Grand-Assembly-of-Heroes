@@ -14,19 +14,34 @@ const RULES = {
   levelUp: { maxHp: 12, atk: 2, def: 1, spd: 0.5 }, // 레벨업마다 오르는 능력치
 };
 
-// ---------- 지도 (9 x 9) ----------
+// ---------- 지도 (21 x 21) ----------
 // 한 글자가 한 칸입니다. 아래 TILES의 글자와 연결됩니다.
-// C = 임시 기지(시작점), X = 흑선탑
+// C = 임시 기지(시작점), E = 버려진 야영지(휴식 가능), X = 흑선탑
+// 화면에는 내 주변 9 x 9 칸만 보이고, 걸어가면 지도가 따라 움직입니다.
+const MAP_VERSION = 2;   // 지도를 크게 바꾸면 이 숫자를 1 올리세요 (모두 기지에서 다시 시작)
+const VIEW = 9;          // 화면에 보이는 칸 수 (홀수)
 const MAP = [
-  "PPPMMOOOP",
-  "PFFMOOOXO",
-  "FFRMBOOOO",
-  "FRRBBTOOP",
-  "FFTBMMWOP",
-  "WFFRMWWWP",
-  "WWFFRFWPP",
-  "WCFFFRWPP",
-  "WWWFFFWPP",
+  "PPPPPMMMMBBOOOOOOOPPP",
+  "PPFFFMMMBBBOOOOOOOOPP",
+  "PFFFRMMTBBOOOOOOOOXOP",
+  "FFFRRMMMBBBOOOOOOOOOP",
+  "FFRRRFMMMBBBOOTOOOOPP",
+  "FFFRFFFMMMBBEOOOOOPPP",
+  "WFFFFFTFMMMBBBOOOPPPP",
+  "WWFFRRFFFMMMBBBOOPPPP",
+  "WWWFFRRFFFMMMBBBPPPPW",
+  "FWWWFFFRFFFMMMBPPPPWW",
+  "FFWWWFFFRRFFTMMPPPWWW",
+  "FFFWWWFFFERFFFPPPWWWF",
+  "RFFFWWWFFFRFFPPPWWWFF",
+  "RRFFFWWWFFFFPPPWWWFFF",
+  "FRRFFFWWWFFPPPWWWFFRR",
+  "FFRRFFFWWWPPPWWWFFFRF",
+  "FFFRRFFFWWWWWWWFFFFFF",
+  "WFFFRRFFFFWWWFFFRRFFF",
+  "WWCFFFRFFFFFFFFFFRFFF",
+  "WWWFFFFFFFRRFFFFFFFFF",
+  "WWWWFFFFFFFFFFFFFFFFF",
 ];
 
 // ---------- 지형 ----------
@@ -36,8 +51,13 @@ const MAP = [
 // events: 탐색 중 낮은 확률로 일어나는 사건
 const TILES = {
   C: {
-    name: "임시 기지", hanja: "營", danger: 0,
+    name: "임시 기지", hanja: "營", danger: 0, rest: true, camp: true,
     desc: "무너진 역참의 벽을 등지고 친 천막 몇 채. 화톳불 연기가 낮게 깔리고, 누군가 숫돌에 칼을 가는 소리가 밤새 끊이지 않는다. 여기서만큼은 등을 보이고 잠들어도 좋다.",
+    drops: [], monsters: [], events: [],
+  },
+  E: {
+    name: "버려진 야영지", hanja: "幕", danger: 0, rest: true,
+    desc: "누군가 먼저 다녀간 자리. 꺼진 화톳불 둘레로 돌이 둥글게 놓여 있고, 바람막이 천 한 장이 아직 말뚝에 매달려 있다. 공방은 없지만 하룻밤 쉬어 갈 수는 있다.",
     drops: [], monsters: [], events: [],
   },
   F: {
@@ -226,7 +246,7 @@ const MONSTERS = {
   captain:  { name: "흑선채 백부장", hp: 140, atk: 20, def: 9,  spd: 8,  exp: 45, merit: 12,
               drops: [["blackiron", 0.8, 2], ["token", 0.9, 2]],
               lines: ["흑철 대도를 휘둘러 바람을 가른다", "'선을 넘은 대가다!' 일갈과 함께 내려찍는다"] },
-  warden:   { name: "흑선탑 수문장", hp: 950, atk: 36, def: 16, spd: 9,  exp: 200, merit: 80, boss: true,
+  warden:   { name: "흑선탑 수문장", hp: 620, atk: 40, def: 18, spd: 10,  exp: 200, merit: 80, boss: true,
               drops: [["blackiron", 1, 4], ["token", 1, 5], ["redling", 0.7, 2]],
               lines: ["검은 실이 감긴 창으로 일대를 휩쓴다", "'이 문은 열리지 않는다.' 목소리가 땅을 울린다", "검은 연기를 토해 시야를 삼킨다"] },
 };
@@ -237,3 +257,66 @@ const PACK_SIZE = { 1: [1], 2: [1, 1, 1, 2], 3: [1, 1, 2], 4: [1, 2, 2, 3], 5: [
 
 // ---------- 레벨별 필요 경험치 ----------
 function expToNext(lv) { return Math.floor(30 + lv * lv * 12); }
+
+// ============================================================
+//  일일 임무
+//  매일 한국 시간 자정에 개인 임무 3개가 새로 뽑힙니다.
+// ============================================================
+
+// 개인 임무 후보. kind 별로 하루에 하나씩만 뽑힙니다.
+//  hunt    : 아무 적이나 토벌 승리 n회
+//  slay    : 특정 적(mid) n마리 처치
+//  search  : 특정 지형(tile) 탐색 n회
+//  reveal  : 새 땅 n칸 밝히기
+//  deliver : 기지에서 재료(item) n개 납품
+//  cook    : 요리 n번 짓기 / forge : 장비 n개 벼리기
+const QUESTS = [
+  { kind: "hunt",    n: 3 },
+  { kind: "slay",    mid: "grunt",    n: 3 },
+  { kind: "slay",    mid: "wolf",     n: 3 },
+  { kind: "slay",    mid: "toad",     n: 2 },
+  { kind: "slay",    mid: "archer",   n: 2 },
+  { kind: "slay",    mid: "jiangshi", n: 2 },
+  { kind: "search",  tile: "F", n: 3 },
+  { kind: "search",  tile: "R", n: 3 },
+  { kind: "search",  tile: "W", n: 3 },
+  { kind: "search",  tile: "M", n: 2 },
+  { kind: "search",  tile: "P", n: 2 },
+  { kind: "search",  tile: "B", n: 2 },
+  { kind: "reveal",  n: 5 },
+  { kind: "deliver", item: "herb",  n: 4 },
+  { kind: "deliver", item: "scrap", n: 3 },
+  { kind: "deliver", item: "hide",  n: 2 },
+  { kind: "deliver", item: "rice",  n: 3 },
+  { kind: "deliver", item: "fish",  n: 3 },
+  { kind: "deliver", item: "salt",  n: 2 },
+  { kind: "cook",    n: 2 },
+  { kind: "forge",   n: 1 },
+];
+
+// 임무 하나를 끝냈을 때 받는 보상 (아래 중 하나가 무작위로 정해짐)
+const QUEST_REWARDS = [
+  { merit: 5, items: { honey: 2, herb: 2 } },
+  { merit: 5, items: { scrap: 3, resin: 1 } },
+  { merit: 5, items: { hide: 2, thread: 2 } },
+  { merit: 6, items: { talisman: 1, cinnabar: 1 } },
+  { merit: 6, items: { fish: 2, salt: 2 } },
+  { merit: 7, items: { redling: 1 } },
+  { merit: 7, items: { blackiron: 1 } },
+];
+// 하루 개인 임무 3개를 모두 끝냈을 때 추가 보상
+const DAILY_BONUS = { merit: 12, items: { blackiron: 2, redling: 1 } };
+
+// ============================================================
+//  공동 임무 — 참가자 전원의 기여를 합산합니다 (로그인 필요)
+//  날짜마다 아래 목록을 차례로 돌아갑니다.
+//  kind: slay(mids 중 하나 처치) / deliver(item 납품) / reveal(새 땅) / search(아무 지형 탐색)
+// ============================================================
+const COMMUNE = [
+  { title: "흑선채 척후 소탕", desc: "흑선채 졸개, 궁수, 백부장을 합쳐서 처치하라.", kind: "slay", mids: ["grunt", "archer", "captain"], target: 40 },
+  { title: "신분패 회수",     desc: "흑선 신분패를 기지에 납품하라. 놈들의 수를 헤아릴 수 있다.", kind: "deliver", item: "token", target: 30 },
+  { title: "안개 걷기",       desc: "모두 함께 새 땅을 밝혀라.", kind: "reveal", target: 80 },
+  { title: "약재 비축",       desc: "마른 약초를 기지에 납품하라. 반생약문이 상처 입은 이들을 돌본다.", kind: "deliver", item: "herb", target: 50 },
+  { title: "들짐승 몰이",     desc: "들개와 늑대를 합쳐서 처치하라. 길이 안전해진다.", kind: "slay", mids: ["dog", "wolf"], target: 40 },
+];
+const COMMUNE_REWARD = { merit: 15, items: { blackiron: 1, honey: 2, redling: 1 } };

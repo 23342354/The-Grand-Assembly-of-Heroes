@@ -34,3 +34,74 @@ create policy "내 기록 고치기" on public.players
 -- 웹페이지에서 표에 접근할 수 있도록 권한 부여
 grant select on public.players to anon, authenticated;
 grant insert, update on public.players to authenticated;
+
+-- ============================================================
+--  교환: 참가자끼리 보내는 꾸러미
+--  (받는 사람이 접속하면 꾸러미를 받으면서 이 표에서 지워집니다)
+-- ============================================================
+create table if not exists public.gifts (
+  id          bigint generated always as identity primary key,
+  from_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  from_name   text not null,
+  to_id       uuid not null references public.players(id) on delete cascade,
+  items       jsonb not null,
+  note        text check (note is null or char_length(note) <= 60),
+  created_at  timestamptz not null default now()
+);
+create index if not exists gifts_to_idx on public.gifts (to_id);
+
+alter table public.gifts enable row level security;
+
+drop policy if exists "내가 보내기" on public.gifts;
+create policy "내가 보내기" on public.gifts
+  for insert to authenticated with check (from_id = auth.uid() and to_id <> auth.uid());
+
+drop policy if exists "주고받은 것만 보기" on public.gifts;
+create policy "주고받은 것만 보기" on public.gifts
+  for select to authenticated using (to_id = auth.uid() or from_id = auth.uid());
+
+drop policy if exists "받은 것 받아가기" on public.gifts;
+create policy "받은 것 받아가기" on public.gifts
+  for delete to authenticated using (to_id = auth.uid());
+
+grant select, insert, delete on public.gifts to authenticated;
+
+-- ============================================================
+--  공동 임무: 날짜별 전체 진행도
+--  직접 고칠 수는 없고, 아래 commune_add 함수로만 조금씩 더할 수 있습니다.
+-- ============================================================
+create table if not exists public.commune (
+  day       date primary key,
+  progress  integer not null default 0
+);
+
+alter table public.commune enable row level security;
+
+drop policy if exists "누구나 진행도 보기" on public.commune;
+create policy "누구나 진행도 보기" on public.commune
+  for select to anon, authenticated using (true);
+
+grant select on public.commune to anon, authenticated;
+
+create or replace function public.commune_add(p_day date, p_amount integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'Asia/Seoul')::date;
+  v integer;
+begin
+  if auth.uid() is null then raise exception '로그인이 필요합니다'; end if;
+  if p_amount < 1 or p_amount > 5 then raise exception '한 번에 1~5까지만 더할 수 있습니다'; end if;
+  if p_day < today - 1 or p_day > today then raise exception '오늘의 공동 임무가 아닙니다'; end if;
+  insert into public.commune as c (day, progress) values (p_day, p_amount)
+    on conflict (day) do update set progress = c.progress + excluded.progress
+    returning c.progress into v;
+  return v;
+end;
+$$;
+
+revoke all on function public.commune_add(date, integer) from public, anon;
+grant execute on function public.commune_add(date, integer) to authenticated;
