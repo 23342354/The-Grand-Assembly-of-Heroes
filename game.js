@@ -310,7 +310,7 @@ function enterGame(isNew) {
 // ============================================================
 //  화면 그리기
 // ============================================================
-function renderAll() { renderHeader(); renderMap(); renderTile(); renderBag(); renderTab(); renderNearby(); updateDots(); }
+function renderAll() { renderHeader(); renderMap(); renderTile(); renderBag(); renderTab(); renderNearby(); updateDots(); centerGlyphs(); }
 
 function renderHeader() {
   const st = stats();
@@ -1844,6 +1844,38 @@ function renderNearby() {
   $("nearby").innerHTML = html;
   $("nearby").querySelectorAll("[data-nb]").forEach((b) => b.onclick = () => openProfile(others.find((p) => p.id === b.dataset.nb)));
 }
+
+
+// ============================================================
+//  인장 속 한자 정중앙 맞추기
+//  글꼴의 실제 글자 모양(잉크)을 재서, 상자 가운데에 오도록 살짝 옮긴다.
+// ============================================================
+const _glyphCtx = document.createElement("canvas").getContext("2d");
+const _glyphCache = {};
+function centerGlyphs(root = document) {
+  root.querySelectorAll(".ch .ic > span, .eq-ic > span, .g-ic > span, .tile-seal > span").forEach((el) => {
+    const txt = el.textContent.trim();
+    if (!txt) return;
+    const cs = getComputedStyle(el);
+    const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const k = font + "|" + txt;
+    let off = _glyphCache[k];
+    if (!off) {
+      _glyphCtx.font = font;
+      const m = _glyphCtx.measureText(txt);
+      const fs = parseFloat(cs.fontSize);
+      const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent;
+      if (A === undefined || m.actualBoundingBoxAscent === undefined) return;
+      const baseline = (fs - (A + D)) / 2 + A;                       // line-height:1 상자 안의 기준선 위치
+      const inkMidY = baseline - (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+      const inkMidX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
+      off = { x: m.width / 2 - inkMidX, y: fs / 2 - inkMidY };
+      _glyphCache[k] = off;
+    }
+    el.style.transform = `translate(${off.x.toFixed(2)}px, ${off.y.toFixed(2)}px)`;
+  });
+}
+if (document.fonts) document.fonts.ready.then(() => { for (const k in _glyphCache) delete _glyphCache[k]; centerGlyphs(); });
 
 // ============================================================
 //  첫 화면: 자동 로그인 확인

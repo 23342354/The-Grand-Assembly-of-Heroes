@@ -1011,10 +1011,7 @@ body.has-update .topbar { top: var(--ub, 46px); }
 .eq-slot.is-empty .eq-eff { color: var(--faint); }
 .eq-slot .btn { width: 52px; padding: 5px 0; text-align: center; }
 
-/* 동그라미·네모 인장 안의 한자를 정중앙에 (New Tegomin은 글자 위 여백이 커서 아래로 처져 보임) */
-:root { --hanja-nudge: -0.08em; }   /* 아직 아래로 처져 보이면 -0.12em, 위로 뜨면 -0.04em */
-.ch .ic, .eq-ic, .g-ic, .tile-seal, .chip-ic { line-height: 1; padding: 0; }
-.ch .ic > span, .eq-ic > span, .g-ic > span, .tile-seal > span { display: block; line-height: 1; transform: translateY(var(--hanja-nudge)); }
-@supports (text-box: trim-both cap alphabetic) {
-  .ch .ic > span, .eq-ic > span, .g-ic > span, .tile-seal > span { text-box: trim-both ideographic; transform: none; }
-}
+/* 동그라미·네모 인장 안의 한자를 정중앙에
+   글꼴마다 글자 위아래 여백이 달라서, 실제 글자 모양을 재서 game.js가 위치를 맞춘다 (centerGlyphs) */
+.ch .ic, .eq-ic, .g-ic, .tile-seal { line-height: 1; padding: 0; }
+.ch .ic > span, .eq-ic > span, .g-ic > span, .tile-seal > span { display: block; line-height: 1; }
