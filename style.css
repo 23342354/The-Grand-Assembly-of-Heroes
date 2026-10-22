@@ -234,7 +234,7 @@ input:focus, select:focus { border-color: var(--gold); }
    넓은 화면(1500px 이상): 지도 | 전도+지형 | 행적  — 1920×1080에서 스크롤 없이 한눈에
    중간 화면: 지도 | 전도+지형 / 행적
    휴대폰: 위에서 아래로 한 줄                                   */
-:root { --mapsize: min(560px, calc(100vh - 230px)); }
+:root { --mapsize: min(460px, calc(100vh - 290px)); }
 .layout {
   display: grid; gap: 16px; padding: 16px 20px 0; max-width: 1700px; margin: 0 auto;
   grid-template-columns: auto minmax(0, 380px);
@@ -245,9 +245,17 @@ input:focus, select:focus { border-color: var(--gold); }
 .side-col { grid-area: side; }
 .log-col { grid-area: log; min-width: 0; }
 @media (min-width: 1500px) {
-  .layout { grid-template-columns: auto 380px minmax(320px, 520px); grid-template-areas: "map side log"; }
-  .log-col, .log-col .log-panel { height: 100%; }
-  .log-col .log { max-height: calc(var(--mapsize) - 40px); }
+  /* 세 칸의 높이를 똑같이 맞춘다 */
+  .layout { grid-template-columns: auto 380px 520px; grid-template-areas: "map side log"; align-items: stretch; }
+  /* 아래 탭도 위 세 칸과 같은 너비로 */
+  nav.tabs { max-width: calc(var(--mapsize) + 22px + 380px + 520px + 32px + 40px); }
+  section.tab-panel { max-width: calc(var(--mapsize) + 22px + 380px + 520px + 32px); }
+  .map-col { display: flex; }
+  .map-col .map-frame { display: flex; flex-direction: column; justify-content: center; outline: none; }
+  .side-col #tilePanel { flex: 1; }
+  .log-col { position: relative; }
+  .log-col .log-panel { position: absolute; inset: 0; min-height: 0; }
+  .log-col .log { max-height: none; min-height: 0; }
 }
 .panel {
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -266,7 +274,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .map-frame {
   border: 1px solid var(--line); outline: 1px solid var(--line-soft); outline-offset: 4px;
   padding: 10px; background: var(--map-bg);
-  width: var(--mapsize); margin: 0 auto;
+  width: calc(var(--mapsize) + 22px); margin: 0 auto;
 }
 .map { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }
 .tile {
@@ -310,7 +318,7 @@ input:focus, select:focus { border-color: var(--gold); }
 .t-X { background: var(--tX-bg); color: var(--tX-fg); text-shadow: 0 0 10px rgba(255,60,40,.8); }
 .tile.t-X { animation: towerPulse 3s ease-in-out infinite; }
 @keyframes towerPulse { 50% { box-shadow: inset 0 0 18px rgba(196,56,47,.55); } }
-.map-hint { text-align: center; color: var(--faint); font-size: 12px; margin: 10px 0 0; }
+.map-hint { text-align: center; color: var(--faint); font-size: 12px; margin: 8px 0 0; }
 
 /* 전도(미니맵) */
 .minimap-label { font-size: 13px; color: var(--dim); letter-spacing: .1em; }
